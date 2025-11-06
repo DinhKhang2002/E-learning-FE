@@ -73,7 +73,7 @@ export default function TeachersSection() {
   }, []);
 
   return (
-    <section className="py-20 bg-gradient-to-b from-black to-gray-900">
+    <section className="bg-gradient-to-l from-indigo-900 via-purple-900 to-gray-900 text-gray-300 mt-20">
       <div className="max-w-7xl mx-auto px-4">
         {/* Section Title */}
         <div className="text-center mb-16">
