@@ -19,57 +19,67 @@ export default function FeaturedCourses() {
   }, []);
 
   return (
-    <section id="featured" className="py-20 bg-gradient-to-b from-gray-900 to-black">
-      <div className="max-w-7xl mx-auto px-4">
-        <div className="text-center mb-12">
-          <h2 className="text-4xl md:text-5xl font-bold text-white mb-4">
-            <span className="bg-gradient-to-r from-pink-400 to-purple-400 bg-clip-text text-transparent">
+    <section id="featured" className="relative overflow-hidden bg-gradient-to-b from-white via-slate-50 to-white py-20">
+      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 flex justify-center">
+        <div className="h-48 w-[80%] rounded-full bg-sky-100/60 blur-3xl" />
+      </div>
+      <div className="mx-auto max-w-7xl px-4">
+        <div className="mb-12 text-center">
+          <h2 className="text-3xl font-bold text-slate-900 md:text-5xl">
+            <span className="bg-gradient-to-r from-sky-500 via-indigo-500 to-purple-500 bg-clip-text text-transparent">
               Khóa học nổi bật
             </span>
           </h2>
-          <p className="text-gray-400">Hàng nghìn học viên đã tin tưởng lựa chọn</p>
+          <p className="mt-3 text-base text-slate-500 md:text-lg">
+            Hàng nghìn học viên đã tin tưởng lựa chọn lộ trình của chúng tôi
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           {courses.map((course, i) => (
             <div
               key={i}
               className={clsx(
-                "group relative bg-white bg-opacity-5 backdrop-blur-xl rounded-2xl overflow-hidden border border-white border-opacity-10 transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl hover:shadow-purple-500/20",
+                "group relative overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-[0_20px_60px_-30px_rgba(15,23,42,0.35)] transition-all duration-500 hover:-translate-y-3 hover:shadow-[0_35px_70px_-30px_rgba(37,99,235,0.45)]",
                 loading ? "animate-pulse" : ""
               )}
-              style={{ transform: loading ? "none" : "perspective(1000px)" }}
             >
-              {/* Skeleton */}
               {loading ? (
-                <div className="p-6 space-y-4">
-                  <div className="h-48 bg-gray-700 rounded-xl"></div>
-                  <div className="h-6 bg-gray-700 rounded w-3/4"></div>
-                  <div className="h-4 bg-gray-700 rounded w-1/2"></div>
+                <div className="space-y-4 p-6">
+                  <div className="h-40 rounded-2xl bg-slate-200" />
+                  <div className="h-6 w-3/4 rounded bg-slate-200" />
+                  <div className="h-4 w-1/2 rounded bg-slate-200" />
                 </div>
               ) : (
                 <>
-                  <div className="h-48 bg-gradient-to-br from-pink-500 to-purple-600 p-1">
-                    <div className="w-full h-full bg-gray-900 flex items-center justify-center">
-                      <BookOpen className="w-16 h-16 text-purple-400" />
+                  <div className="h-40 bg-gradient-to-br from-sky-100 via-white to-indigo-100 p-1">
+                    <div className="flex h-full w-full items-center justify-center rounded-2xl bg-white">
+                      <BookOpen className="h-14 w-14 text-sky-500" />
                     </div>
                   </div>
-                  <div className="p-6 space-y-3">
-                    <h3 className="font-bold text-white group-hover:text-purple-400 transition">{course.title}</h3>
-                    <p className="text-sm text-gray-400 flex items-center">
-                      <Users className="w-4 h-4 mr-1" /> {course.teacher}
+                  <div className="space-y-4 p-6">
+                    <h3 className="text-lg font-semibold text-slate-900 group-hover:text-sky-600 transition">
+                      {course.title}
+                    </h3>
+                    <p className="flex items-center text-sm font-medium text-slate-500">
+                      <Users className="mr-2 h-4 w-4 text-sky-500" />
+                      {course.teacher}
                     </p>
                     <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center text-yellow-400">
-                        <Star className="w-4 h-4 fill-current" /> {course.rating}
+                      <div className="flex items-center gap-1 text-amber-500">
+                        <Star className="h-4 w-4 fill-current" />
+                        <span>{course.rating}</span>
                       </div>
-                      <div className="flex items-center text-gray-400">
-                        <Clock className="w-4 h-4 mr-1" /> {course.duration}
+                      <div className="flex items-center gap-1 text-slate-400">
+                        <Clock className="h-4 w-4" />
+                        <span>{course.duration}</span>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xl font-bold text-pink-400">{course.price}</span>
-                      <button className="px-4 py-2 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-sm rounded-full hover:scale-105 transition">
+                    <div className="flex items-center justify-between pt-4">
+                      <span className="text-xl font-bold text-sky-600">
+                        {course.price}
+                      </span>
+                      <button className="inline-flex items-center rounded-full bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500 px-4 py-2 text-sm font-semibold text-white shadow-[0_15px_35px_rgba(37,99,235,0.35)] transition hover:shadow-[0_15px_40px_rgba(37,99,235,0.45)]">
                         Xem chi tiết
                       </button>
                     </div>
