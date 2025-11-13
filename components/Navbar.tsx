@@ -4,6 +4,7 @@ import { Menu, X, LogOut, User, Settings, BookOpen } from "lucide-react";
 import clsx from "clsx";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Notification from "./Notification";
 
 type StoredUser = {
   id?: number;
@@ -115,7 +116,7 @@ export default function Navbar() {
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
-              {navItems.map((item) => (
+              {!isLoggedIn && navItems.map((item) => (
                 <Link
                   key={item.label}
                   href={item.href}
@@ -144,18 +145,27 @@ export default function Navbar() {
                   </button>
                 </div>
               ) : (
-                <div className="relative">
-                  <button
-                    onClick={() => setProfileOpen(!profileOpen)}
-                    className="flex items-center space-x-3 group"
-                  >
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 p-0.5">
-                      <div className="w-full h-full rounded-full bg-gray-900 flex items-center justify-center">
-                        <User className="w-5 h-5 text-pink-400" />
+                <div className="flex items-center space-x-4">
+                  <Notification
+                    userId={user?.id}
+                    authToken={
+                      typeof window !== "undefined"
+                        ? window.localStorage.getItem("accessToken")
+                        : null
+                    }
+                  />
+                  <div className="relative">
+                    <button
+                      onClick={() => setProfileOpen(!profileOpen)}
+                      className="flex items-center space-x-3 group"
+                    >
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 p-0.5">
+                        <div className="w-full h-full rounded-full bg-gray-900 flex items-center justify-center">
+                          <User className="w-5 h-5 text-pink-400" />
+                        </div>
                       </div>
-                    </div>
-                    <span className="text-white font-medium hidden lg:block">{displayName}</span>
-                  </button>
+                      <span className="text-white font-medium hidden lg:block">{displayName}</span>
+                    </button>
 
                   {/* Dropdown Profile */}
                   {profileOpen && (
@@ -188,6 +198,7 @@ export default function Navbar() {
                       </div>
                     </div>
                   )}
+                  </div>
                 </div>
               )}
             </div>
@@ -242,18 +253,20 @@ export default function Navbar() {
               </button>
             </div>
 
-            <div className="space-y-1">
-              {navItems.map((item) => (
-                <Link
-                  key={item.label}
-                  href={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block py-3 px-4 text-lg text-gray-200 hover:text-white hover:bg-white hover:bg-opacity-10 rounded-xl transition-all"
-                >
-                  {item.label}
-                </Link>
-              ))}
-            </div>
+            {!isLoggedIn && (
+              <div className="space-y-1">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block py-3 px-4 text-lg text-gray-200 hover:text-white hover:bg-white hover:bg-opacity-10 rounded-xl transition-all"
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+              </div>
+            )}
 
             <div className="mt-8 pt-8 border-t border-white border-opacity-20">
               {!isLoggedIn ? (

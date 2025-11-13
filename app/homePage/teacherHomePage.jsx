@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 import {
   BookOpenCheck,
   CalendarDays,
@@ -17,7 +18,6 @@ import TeacherQuickActionCard from "@/components/TeacherQuickActionCard";
 import TeacherStatCard from "@/components/TeacherStatCard";
 import TeacherScheduleItem from "@/components/TeacherScheduleItem";
 import TeacherTodoItem from "@/components/TeacherTodoItem";
-import TeacherNotificationList from "@/components/TeacherNotificationList";
 
 const CLASSES_API = "http://localhost:8080/education/api/classes/teacher";
 const NOTICES_API = (userId) =>
@@ -66,6 +66,7 @@ const todoItems = [
 ];
 
 export default function TeacherHomePage() {
+  const router = useRouter();
   const [authToken, setAuthToken] = useState(null);
   const [user, setUser] = useState(null);
 
@@ -154,47 +155,10 @@ export default function TeacherHomePage() {
     []
   );
 
-  const fetchTeacherNotifications = useCallback(async (token, userId) => {
-    if (!userId) return;
-    setNotificationsLoading(true);
-    setNotificationsError(null);
-    try {
-      const response = await fetch(NOTICES_API(userId), {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      const data = await response.json();
-      if (!response.ok || data.code !== 1000 || !Array.isArray(data.result)) {
-        throw new Error(
-          data?.message || "Không thể tải thông báo của bạn. Vui lòng thử lại."
-        );
-      }
-
-      setNotifications(data.result ?? []);
-    } catch (error) {
-      setNotifications([]);
-      setNotificationsError(
-        error instanceof Error
-          ? error.message
-          : "Không thể tải thông báo. Vui lòng thử lại sau."
-      );
-    } finally {
-      setNotificationsLoading(false);
-    }
-  }, []);
-
   useEffect(() => {
     if (!authToken) return;
     fetchTeacherClasses(authToken);
   }, [authToken, fetchTeacherClasses]);
-
-  useEffect(() => {
-    if (!authToken || !user?.id) return;
-    fetchTeacherNotifications(authToken, user.id);
-  }, [authToken, user, fetchTeacherNotifications]);
 
   const filteredClasses = useMemo(() => {
     if (!selectedSemester) return classes;
@@ -239,12 +203,6 @@ export default function TeacherHomePage() {
   const handleRetryClasses = () => {
     if (authToken) {
       fetchTeacherClasses(authToken);
-    }
-  };
-
-  const handleRetryNotifications = () => {
-    if (authToken && user?.id) {
-      fetchTeacherNotifications(authToken, user.id);
     }
   };
 
@@ -354,6 +312,9 @@ export default function TeacherHomePage() {
                         description={course.description}
                         semester={course.semester}
                         createdAt={course.createdAt}
+                        onAction={() => {
+                          router.push(`/classPage?id=${course.id}`);
+                        }}
                       />
                     ))}
                   </div>
@@ -402,26 +363,6 @@ export default function TeacherHomePage() {
                 transition={{ delay: 0.3, duration: 0.55, ease: "easeOut" }}
                 className="rounded-3xl border border-slate-100 bg-white/95 p-6 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.45)] backdrop-blur-sm"
               >
-                <div className="flex items-center justify-between gap-3">
-                  <h3 className="text-lg font-semibold text-slate-900">
-                    Thông báo gần đây
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={handleRetryNotifications}
-                    className="text-sm font-semibold text-sky-600 transition hover:text-sky-700"
-                  >
-                    Làm mới
-                  </button>
-                </div>
-                <div className="mt-5">
-                  <TeacherNotificationList
-                    notifications={notifications}
-                    loading={notificationsLoading}
-                    error={notificationsError}
-                    onRetry={handleRetryNotifications}
-                  />
-                </div>
               </motion.section>
 
               <motion.section
