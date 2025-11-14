@@ -1,5 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { User, BookOpen, LogOut } from "lucide-react";
 
 interface AvatarProps {
   onLogout: () => void;
@@ -8,6 +10,7 @@ interface AvatarProps {
 export default function Avatar({ onLogout }: AvatarProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   // Đóng menu khi click ra ngoài
   useEffect(() => {
@@ -19,6 +22,11 @@ export default function Avatar({ onLogout }: AvatarProps) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const handleProfileClick = () => {
+    setOpen(false);
+    router.push("/userInfo");
+  };
 
   return (
     <div className="relative" ref={menuRef}>
@@ -36,27 +44,40 @@ export default function Avatar({ onLogout }: AvatarProps) {
 
       {/* Dropdown menu */}
       {open && (
-        <div className="absolute right-0 mt-2 w-48 bg-white border rounded-lg shadow-lg z-50 animate-fadeIn">
-          <a
-            href="#"
-            className="block px-4 py-2 hover:bg-gray-100 text-gray-700"
+        <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-xl shadow-xl z-50 overflow-hidden">
+          <button
+            onClick={handleProfileClick}
+            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-900 transition-colors"
           >
-            Hồ sơ cá nhân
-          </a>
-          <a
-            href="#"
-            className="block px-4 py-2 hover:bg-gray-100 text-gray-700"
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600">
+              <User size={18} strokeWidth={2} />
+            </div>
+            <span className="font-medium">Hồ sơ cá nhân</span>
+          </button>
+          <button
+            onClick={() => {
+              setOpen(false);
+              // TODO: Navigate to courses page
+            }}
+            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 text-gray-900 transition-colors"
           >
-            Khóa học của tôi
-          </a>
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-100 text-blue-600">
+              <BookOpen size={18} strokeWidth={2} />
+            </div>
+            <span className="font-medium">Khóa học của tôi</span>
+          </button>
+          <div className="border-t border-gray-200 my-1" />
           <button
             onClick={() => {
               onLogout();
               setOpen(false);
             }}
-            className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-500"
+            className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 text-red-600 transition-colors"
           >
-            Đăng xuất
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-red-100 text-red-600">
+              <LogOut size={18} strokeWidth={2} />
+            </div>
+            <span className="font-medium">Đăng xuất</span>
           </button>
         </div>
       )}

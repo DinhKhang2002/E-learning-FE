@@ -171,23 +171,54 @@ export default function Navbar() {
                   {profileOpen && (
                     <div className="absolute right-0 mt-3 w-56 bg-white bg-opacity-10 backdrop-blur-xl rounded-2xl shadow-2xl border border-white border-opacity-20 overflow-hidden">
                       <div className="p-4 border-b border-white border-opacity-10">
-                        <p className="text-white font-semibold">{displayName}</p>
-                        <p className="text-gray-300 text-sm">{displayEmail}</p>
+                        <p className="text-black text-sm">{displayName}</p>
+                        <p className="text-black text-sm font-light italic">{displayEmail}</p>
                       </div>
+                      <div className="h-[1.5px] bg-yellow-300 opacity-70 mx-4"></div>
                       <div className="py-2">
-                        {[
-                          { icon: User, label: "Hồ sơ" },
-                          { icon: BookOpen, label: "Khóa học của tôi" },
-                          { icon: Settings, label: "Cài đặt" },
-                        ].map((item, i) => (
-                          <button
-                            key={i}
-                            className="w-full px-4 py-3 flex items-center space-x-3 text-gray-200 hover:bg-white hover:bg-opacity-10 transition-all"
-                          >
-                            <item.icon className="w-4 h-4" />
-                            <span>{item.label}</span>
-                          </button>
-                        ))}
+                        <button
+                          onClick={() => {
+                            setProfileOpen(false);
+                            router.push("/userInfo");
+                          }}
+                          className="
+                            w-full px-4 py-3 flex items-center space-x-3
+                            text-black
+                            hover:bg-gray-200
+                            transition-all"
+                        >
+                          <User className="w-4 h-4 text-blue-500" />
+                          <span className="text-black">Hồ sơ</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setProfileOpen(false);
+                            router.push("/homePage#courses");
+                          }}
+                          className="
+                            w-full px-4 py-3 flex items-center space-x-3
+                            text-black
+                            hover:bg-gray-200
+                            transition-all"
+                        >
+                          <BookOpen className="w-4 h-4 text-blue-500" />
+                          <span className="text-black">Khóa học của tôi</span>
+                        </button>
+                        <button
+                          onClick={() => {
+                            setProfileOpen(false);
+                            // TODO: Navigate to settings page when available
+                            console.log("Settings clicked");
+                          }}
+                          className="
+                            w-full px-4 py-3 flex items-center space-x-3
+                            text-black
+                            hover:bg-gray-200
+                            transition-all"
+                        >
+                          <Settings className="w-4 h-4 text-blue-500" />
+                          <span className="text-black">Cài đặt</span>
+                        </button>
                         <button
                           onClick={handleLogout}
                           className="w-full px-4 py-3 flex items-center space-x-3 text-red-400 hover:bg-red-500 hover:bg-opacity-20 transition-all"
