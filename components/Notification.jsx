@@ -1,12 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ArrowLeft, Bell, CalendarClock, FileText, NotebookPen, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Bell,
+  CalendarClock,
+  FileText,
+  NotebookPen,
+  X,
+  User,
+  MessageSquare,
+} from "lucide-react";
+import Portal from "./Portal";
 
 const NOTICES_API = (userId) =>
   `http://localhost:8080/education/api/notices/user/${userId}`;
-const NOTICE_DETAIL_API = (noticeId) =>
-  `http://localhost:8080/education/api/notices/${noticeId}`;
 const MARK_READ_API = (noticeId) =>
   `http://localhost:8080/education/api/notices/${noticeId}/read`;
 
@@ -59,7 +67,6 @@ export default function Notification({ userId, authToken }) {
   const [loading, setLoading] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
-  const [detailLoading, setDetailLoading] = useState(false);
   const menuRef = useRef(null);
   const detailRef = useRef(null);
 
@@ -142,64 +149,23 @@ export default function Notification({ userId, authToken }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const fetchNotificationDetail = useCallback(
-    async (noticeId) => {
-      if (!authToken) return null;
-      setDetailLoading(true);
-      try {
-        const response = await fetch(NOTICE_DETAIL_API(noticeId), {
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-            "Content-Type": "application/json",
-          },
-        });
-
-        const data = await response.json();
-        if (!response.ok || data.code !== 1000 || !data.result) {
-          throw new Error(
-            data?.message || "Không thể tải chi tiết thông báo. Vui lòng thử lại."
-          );
-        }
-
-        return data.result;
-      } catch (error) {
-        console.error("Failed to fetch notification detail:", error);
-        return null;
-      } finally {
-        setDetailLoading(false);
-      }
-    },
-    [authToken]
-  );
-
   const unreadCount = notifications.filter((item) => !item.read).length;
 
-  const handleNotificationClick = async (notification) => {
+  const handleNotificationClick = (notification) => {
+    // Dữ liệu đã có sẵn: content, sender, type, createAt...
+    setSelectedNotification(notification);
     setDetailOpen(true);
-    setDetailLoading(true);
-    
-    // Gọi API lấy chi tiết thông báo
-    const detail = await fetchNotificationDetail(notification.id);
-    
-    if (detail) {
-      setSelectedNotification(detail);
-      
-      // Cập nhật thông báo trong danh sách với dữ liệu mới nhất
-      setNotifications((prev) =>
-        prev.map((item) => (item.id === detail.id ? detail : item))
-      );
-      
-      // Đánh dấu đã đọc nếu chưa đọc
-      if (!detail.read) {
-        markAsRead(detail.id);
-      }
-    } else {
-      // Nếu không lấy được chi tiết, vẫn hiển thị thông tin từ danh sách
-      setSelectedNotification(notification);
-      if (!notification.read) {
-        markAsRead(notification.id);
-      }
+
+    // Đánh dấu đã đọc nếu chưa
+    if (!notification.read) {
+      markAsRead(notification.id);
     }
+
+    // Tự động cuộn về giữa màn hình
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   };
 
   const config = selectedNotification
@@ -302,133 +268,107 @@ export default function Notification({ userId, authToken }) {
           </div>
         )}
       </div>
-
       {detailOpen && selectedNotification && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
-          <div
-            ref={detailRef}
-            className="relative w-full max-w-3xl bg-gradient-to-br from-white via-white to-slate-50 rounded-3xl shadow-2xl border border-slate-200 overflow-hidden"
-          >
-            {/* Header với nút back */}
-            <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={() => {
-                    setDetailOpen(false);
-                    setSelectedNotification(null);
-                  }}
-                  className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 transition-all duration-200"
-                  aria-label="Quay lại"
-                >
-                  <ArrowLeft className="w-5 h-5" />
-                </button>
-                <div className="flex items-center gap-4 flex-1">
-                  <div
-                    className={`flex h-14 w-14 items-center justify-center rounded-2xl ${config.accent} shadow-sm`}
-                  >
-                    <Icon size={28} strokeWidth={1.8} />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-slate-900 font-bold text-xl">
-                      {config.label}
-                    </h3>
-                    <div className="flex items-center gap-3 mt-1">
-                      <p className="text-sm text-slate-500">
-                        {formatDateTime(selectedNotification.createAt)}
-                      </p>
-                      <span className="h-1 w-1 rounded-full bg-slate-400" />
-                      <span
-                        className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                          selectedNotification.read
-                            ? "bg-emerald-100 text-emerald-700"
-                            : "bg-amber-100 text-amber-700"
-                        }`}
-                      >
-                        {selectedNotification.read ? "Đã đọc" : "Chưa đọc"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Nội dung chính */}
-            <div className="p-8">
-              {detailLoading ? (
-                <div className="space-y-6">
-                  <div className="h-48 rounded-2xl bg-slate-100 animate-pulse" />
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="h-20 rounded-xl bg-slate-100 animate-pulse" />
-                    <div className="h-20 rounded-xl bg-slate-100 animate-pulse" />
-                  </div>
-                </div>
-              ) : selectedNotification ? (
-                <div className="space-y-6">
-                  {/* Nội dung thông báo - phần quan trọng nhất */}
-                  <div>
-                    <div className="mb-4">
-                      <h4 className="text-sm font-bold uppercase tracking-wide text-slate-500 mb-1">
-                        Nội dung thông báo
-                      </h4>
-                      <div className="h-1 w-16 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full" />
-                    </div>
-                    <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-white p-6 border-2 border-slate-200 shadow-sm">
-                      <p className="text-slate-900 leading-relaxed text-lg font-medium">
-                        {selectedNotification.content}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Thông tin bổ sung */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="rounded-xl bg-slate-50 p-5 border border-slate-200">
-                      <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">
-                        Loại thông báo
-                      </p>
-                      <p className="text-slate-900 font-semibold text-base">
-                        {config.label}
-                      </p>
-                    </div>
-                    <div className="rounded-xl bg-slate-50 p-5 border border-slate-200">
-                      <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-2">
-                        Thời gian nhận
-                      </p>
-                      <p className="text-slate-900 font-semibold text-base">
-                        {formatDate(selectedNotification.createAt)}
-                      </p>
-                      <p className="text-slate-600 text-sm mt-1">
-                        {new Date(selectedNotification.createAt).toLocaleTimeString("vi-VN", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-12 text-center">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mb-4">
-                    <X className="w-8 h-8 text-red-500" />
-                  </div>
-                  <p className="text-slate-600 font-medium">
-                    Không thể tải chi tiết thông báo
-                  </p>
+        <Portal>
+          <div className="fixed inset-0 z-[9999] flex min-h-screen items-center justify-center p-4 bg-opacity-60 backdrop-blur-sm">
+            <div
+              ref={detailRef}
+              className="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-y-auto max-h-[90vh]"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* === HEADER === */}
+              <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white">
+                <div className="flex items-center gap-4">
                   <button
                     onClick={() => {
                       setDetailOpen(false);
                       setSelectedNotification(null);
                     }}
-                    className="mt-4 px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-900 transition"
+                    className="flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 transition-all duration-200"
                   >
-                    Đóng
+                    <ArrowLeft className="w-5 h-5" />
                   </button>
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${config.accent} shadow-sm`}>
+                      <Icon size={28} strokeWidth={1.8} />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-slate-900 font-bold text-xl">{config.label}</h3>
+                      <div className="flex items-center gap-3 mt-1">
+                        <p className="text-sm text-slate-500">{formatDateTime(selectedNotification.createAt)}</p>
+                        <span className="h-1 w-1 rounded-full bg-slate-400" />
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${selectedNotification.read ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                          {selectedNotification.read ? "Đã đọc" : "Chưa đọc"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              )}
+              </div>
+
+              {/* === NỘI DUNG === */}
+              <div className="p-8 space-y-6">
+                {/* Nội dung thông báo */}
+                {selectedNotification.content && (
+                  <div>
+                    <div className="mb-4">
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-slate-500 mb-1">Nội dung thông báo</h4>
+                      <div className="h-1 w-16 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full" />
+                    </div>
+                    <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-white p-6 border-2 border-slate-200 shadow-sm">
+                      <div className="flex items-start gap-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-600 flex-shrink-0">
+                          <MessageSquare size={24} strokeWidth={1.8} />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-slate-900 leading-relaxed text-base font-medium">
+                            {selectedNotification.content}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Người gửi */}
+                {selectedNotification.senderUserFullName && (
+                  <div>
+                    <div className="mb-4">
+                      <h4 className="text-sm font-bold uppercase tracking-wide text-slate-500 mb-1">Người gửi</h4>
+                      <div className="h-1 w-16 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full" />
+                    </div>
+                    <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-white p-6 border-2 border-slate-200 shadow-sm">
+                      <div className="flex items-start gap-4">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-pink-100 to-purple-100 text-pink-600 flex-shrink-0">
+                          <User size={24} strokeWidth={1.8} />
+                        </div>
+                        <div className="flex-1 space-y-3">
+                          <div>
+                            <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1">Họ và tên</p>
+                            <p className="text-slate-900 font-semibold text-base">{selectedNotification.senderUserFullName}</p>
+                          </div>
+                          {selectedNotification.senderUserEmail && (
+                            <div>
+                              <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1">Email</p>
+                              <p className="text-slate-700 text-sm">{selectedNotification.senderUserEmail}</p>
+                            </div>
+                          )}
+                          {selectedNotification.senderUserName && (
+                            <div>
+                              <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-1">Tên đăng nhập</p>
+                              <p className="text-slate-600 text-sm font-mono">{selectedNotification.senderUserName}</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        </Portal>
       )}
     </>
   );
 }
-
