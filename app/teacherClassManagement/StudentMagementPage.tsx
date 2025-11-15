@@ -12,6 +12,15 @@ import {
   MessageSquare,
   Trash2,
   Loader2,
+  ArrowLeft,
+  User,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar,
+  Hash,
+  BookOpen,
+  UserCheck,
 } from "lucide-react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
@@ -76,6 +85,8 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
   const [showAddModal, setShowAddModal] = useState(false);
   const [studentIdToAdd, setStudentIdToAdd] = useState("");
   const [deletingStudentId, setDeletingStudentId] = useState<number | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -187,7 +198,6 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
         throw new Error(data?.message || "Không thể thêm học sinh vào lớp.");
       }
 
-      // Refresh student list
       if (authToken) {
         await fetchStudents(authToken, classId);
       }
@@ -231,7 +241,6 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
         throw new Error(data?.message || "Không thể xóa học sinh khỏi lớp.");
       }
 
-      // Refresh student list
       await fetchStudents(authToken, classId);
       alert("Xóa học sinh khỏi lớp thành công!");
     } catch (err) {
@@ -246,7 +255,11 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
     }
   };
 
-  // Filter students based on search query
+  const handleViewDetail = (student: Student) => {
+    setSelectedStudent(student);
+    setDetailOpen(true);
+  };
+
   const filteredStudents = useMemo(() => {
     if (!searchQuery.trim()) return students;
 
@@ -260,7 +273,6 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
     );
   }, [students, searchQuery]);
 
-  // Pagination
   const totalPages = Math.ceil(filteredStudents.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const endIndex = startIndex + ITEMS_PER_PAGE;
@@ -493,6 +505,7 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-3">
                             <button
+                              onClick={() => handleViewDetail(student)}
                               className="p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                               title="Xem chi tiết"
                             >
@@ -619,7 +632,157 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
           </motion.div>
         </div>
       )}
+
+      {/* Student Detail Modal */}
+      {detailOpen && selectedStudent && (
+        <div className="fixed inset-0 z-[9999] flex min-h-screen items-center justify-center p-4 bg-opacity-60 backdrop-blur-sm">
+          <div
+            className="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-y-auto max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-8 space-y-6">
+              <div className="relative flex items-center w-full h-24">
+                {/* Nút quay lại ở bên trái */}
+                <button
+                  onClick={() => {
+                    setDetailOpen(false);
+                    setSelectedStudent(null);
+                  }}
+                  className="absolute left-0 flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-900 transition-all duration-200"
+                >
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+
+                {/* Div avatar + thông tin học sinh ở giữa */}
+                <div className="flex items-center gap-6 mx-auto">
+                  <img
+                    src={selectedStudent.avatar || "/avatar-default.png"}
+                    alt={`${selectedStudent.firstName} ${selectedStudent.lastName}`}
+                    className="w-24 h-24 rounded-3xl object-cover shadow-md"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = "/avatar-default.png";
+                    }}
+                  />
+                  <div className="space-y-2">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-slate-800">Mã học sinh:</span>
+                        <span className="text-lg font-mono font-bold text-slate-900">
+                          {formatStudentId(selectedStudent.id)}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-bold text-slate-800">Họ và tên:</span>
+                        <span className="text-lg font-medium text-slate-900">
+                          {selectedStudent.firstName} {selectedStudent.lastName}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Thông tin cơ bản */}
+              <div>
+                <div className="mb-4">
+                  <h4 className="text-sm font-bold uppercase tracking-wide text-slate-500 mb-1">
+                    Thông tin cơ bản
+                  </h4>
+                  <div className="h-1 w-16 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-white p-5 border-2 border-slate-200 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-100 to-indigo-100 text-blue-600 flex-shrink-0">
+                        <Mail size={20} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Email</p>
+                        <p className="text-slate-900 font-medium break-all">{selectedStudent.email}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-white p-5 border-2 border-slate-200 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-green-100 to-emerald-100 text-green-600 flex-shrink-0">
+                        <Phone size={20} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Số điện thoại</p>
+                        <p className="text-slate-900 font-medium">{selectedStudent.phoneNumber || "—"}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-white p-5 border-2 border-slate-200 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-purple-100 to-pink-100 text-purple-600 flex-shrink-0">
+                        <MapPin size={20} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Địa chỉ</p>
+                        <p className="text-slate-900 font-medium">{selectedStudent.address || "—"}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-white p-5 border-2 border-slate-200 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 text-amber-600 flex-shrink-0">
+                        <Calendar size={20} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Ngày sinh</p>
+                        <p className="text-slate-900 font-medium">{formatDate(selectedStudent.dob)}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Thông tin hệ thống */}
+              <div>
+                <div className="mb-4">
+                  <h4 className="text-sm font-bold uppercase tracking-wide text-slate-500 mb-1">
+                    Thông tin hệ thống
+                  </h4>
+                  <div className="h-1 w-16 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-white p-5 border-2 border-slate-200 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-100 to-blue-100 text-indigo-600 flex-shrink-0">
+                        <UserCheck size={20} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Tên đăng nhập</p>
+                        <p className="text-slate-900 font-medium font-mono">{selectedStudent.username}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-white p-5 border-2 border-slate-200 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-pink-100 to-rose-100 text-pink-600 flex-shrink-0">
+                        <BookOpen size={20} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Môn học chính</p>
+                        <p className="text-slate-900 font-medium">
+                          {selectedStudent.primarySubject === "ENGLISH" ? "Tiếng Anh" :
+                           selectedStudent.primarySubject === "COMPUTER_SCIENCE" ? "Tin học" :
+                           selectedStudent.primarySubject || "—"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
-
