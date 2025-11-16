@@ -78,7 +78,7 @@ const studentSections = [
     icon: GraduationCap,
     color: "from-amber-500 via-orange-500 to-red-500",
     hoverColor: "hover:from-amber-600 hover:via-orange-600 hover:to-red-600",
-    href: "/studentClassPage/exams",
+    href: "/studentClassAction/ExamAction",
     description: "Tham gia các kỳ thi trực tuyến",
   },
   {
