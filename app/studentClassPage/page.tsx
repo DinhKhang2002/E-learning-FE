@@ -87,7 +87,7 @@ const studentSections = [
     icon: Star,
     color: "from-yellow-500 via-amber-500 to-orange-500",
     hoverColor: "hover:from-yellow-600 hover:via-amber-600 hover:to-orange-600",
-    href: "/studentClassPage/grades",
+    href: "/studentClassAction/ScoreAction",
     description: "Xem điểm các bài tập và kỳ thi",
   },
 ];
