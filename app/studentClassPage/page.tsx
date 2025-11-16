@@ -51,7 +51,7 @@ const studentSections = [
     icon: CheckSquare,
     color: "from-emerald-500 via-teal-500 to-cyan-500",
     hoverColor: "hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600",
-    href: "/studentClassPage/attendance",
+    href: "/studentClassAction/AttandenceAction",
     description: "Xem lịch sử điểm danh và gửi đơn xin nghỉ",
   },
   {
@@ -60,7 +60,7 @@ const studentSections = [
     icon: BookOpen,
     color: "from-indigo-500 via-purple-500 to-pink-500",
     hoverColor: "hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600",
-    href: "/studentClassPage/documents",
+    href: "/studentClassAction/DocumentAction",
     description: "Tải xuống và xem tài liệu học tập",
   },
   {
