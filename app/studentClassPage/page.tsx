@@ -69,7 +69,7 @@ const studentSections = [
     icon: FileText,
     color: "from-blue-500 via-cyan-500 to-sky-500",
     hoverColor: "hover:from-blue-600 hover:via-cyan-600 hover:to-sky-600",
-    href: "/studentClassPage/assignments",
+    href: "/studentClassAction/AssignmentAction",
     description: "Xem và nộp bài tập về nhà",
   },
   {
