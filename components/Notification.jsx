@@ -198,14 +198,15 @@ export default function Notification({ userId, authToken }) {
         {open && (
           <div className="absolute right-0 mt-3 w-96 max-h-[600px] bg-white bg-opacity-10 backdrop-blur-xl rounded-2xl shadow-2xl border border-white border-opacity-20 overflow-hidden z-50">
             <div className="p-4 border-b border-white border-opacity-10 flex items-center justify-between">
-              <h3 className="text-white font-semibold text-lg">Thông báo</h3>
+              <h3 className="text-black font-semibold text-lg">Thông báo</h3>
               <button
                 onClick={() => setOpen(false)}
-                className="text-gray-300 hover:text-white transition"
+                className="text-gray-300 hover:text-red-600 transition"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
+            <div class="w-full h-[1px] bg-black"></div>
             <div className="overflow-y-auto max-h-[500px]">
               {loading ? (
                 <div className="p-6 space-y-3">
@@ -235,7 +236,7 @@ export default function Notification({ userId, authToken }) {
                       <button
                         key={item.id}
                         onClick={() => handleNotificationClick(item)}
-                        className={`w-full p-4 text-left hover:bg-white hover:bg-opacity-10 transition-all ${
+                        className={`w-full p-4 text-left hover:bg-gray-300 hover:bg-opacity-10 transition-all ${
                           !item.read ? "bg-white bg-opacity-5" : ""
                         }`}
                       >
@@ -247,14 +248,14 @@ export default function Notification({ userId, authToken }) {
                           </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center justify-between gap-2 mb-1">
-                              <span className="text-xs font-semibold uppercase tracking-wide text-pink-300">
+                              <span className="text-xs font-semibold uppercase tracking-wide text-purple-600">
                                 {itemConfig.label}
                               </span>
                               {!item.read && (
                                 <span className="h-2 w-2 rounded-full bg-pink-500 flex-shrink-0" />
                               )}
                             </div>
-                            <p className="text-xs font-medium text-gray-300">
+                            <p className="text-xs font-medium text-black">
                               {formatDateTime(item.createAt)}
                             </p>
                           </div>
