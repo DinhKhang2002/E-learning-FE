@@ -19,6 +19,7 @@ import {
   AlertCircle,
   Upload,
   File,
+  Award,
 } from "lucide-react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
@@ -593,6 +594,16 @@ export default function AssignmentManagementPage({
                             ID: {assignment.id}
                           </span>
                           <div className="flex items-center gap-2">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/classPage/grade-submissions?assignmentId=${assignment.id}&classId=${classId}`);
+                              }}
+                              className="p-2 text-slate-600 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+                              title="Chấm bài"
+                            >
+                              <Award className="w-4 h-4" />
+                            </button>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
