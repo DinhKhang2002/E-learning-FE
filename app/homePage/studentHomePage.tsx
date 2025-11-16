@@ -232,7 +232,7 @@ export default function HomePage() {
   }, [classes, selectedSemester]);
 
   const handleClassClick = (classId: number) => {
-    router.push(`/studentClassPage.tsx?id=${classId}`);
+    router.push(`/studentClassPage?id=${classId}`);
   };
 
   return (
