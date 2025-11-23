@@ -17,6 +17,7 @@ const SAVE_ROOM_PATH_API = (roomId: string | number, path: string) =>
   `http://localhost:8080/education/api/rooms/${roomId}/save-path?path=${encodeURIComponent(path)}`;
 const CHECK_ROOMS_API = (classId: string | number) =>
   `http://localhost:8080/education/api/rooms/class/${classId}/check`;
+const JOIN_ROOM_API = `http://localhost:8080/education/api/rooms/join`;
 
 interface ClassData {
   id: number;
@@ -57,6 +58,7 @@ interface RoomInfo {
   roomName: string;
   classRoomPath: string;
   status: string;
+  roomId?: number; // Room ID from API response
 }
 
 interface CheckRoomsResponse {
@@ -174,6 +176,7 @@ export default function ClassPage() {
                 roomName: room.roomName,
                 classRoomPath: room.classRoomPath,
                 status: room.status,
+                roomId: (room as any).id || undefined, // Try to get id from response
               });
             }
           } else {
@@ -353,8 +356,56 @@ export default function ClassPage() {
                       {activeRoom.roomName}
                     </p>
                     <button
-                      onClick={() => {
-                        if (activeRoom.classRoomPath) {
+                      onClick={async () => {
+                        if (activeRoom.classRoomPath && authToken) {
+                          try {
+                            // Get userId from localStorage
+                            const storedUser = window.localStorage.getItem("user");
+                            let userId: number | null = null;
+
+                            if (storedUser) {
+                              try {
+                                const user = JSON.parse(storedUser);
+                                userId = user.id || null;
+                              } catch (error) {
+                                console.warn("Failed to parse user info", error);
+                              }
+                            }
+
+                            // Get roomId - try from activeRoom
+                            // Note: roomId should come from the API response (check rooms API)
+                            // If not available, we'll skip the join API call but still redirect
+                            const roomId = activeRoom.roomId;
+
+                            if (userId && roomId) {
+                              // Call join room API
+                              const response = await fetch(JOIN_ROOM_API, {
+                                method: "POST",
+                                headers: {
+                                  Authorization: `Bearer ${authToken}`,
+                                  "Content-Type": "application/json",
+                                },
+                                body: JSON.stringify({
+                                  roomId: roomId,
+                                  userId: userId,
+                                }),
+                              });
+
+                              const data = await response.json();
+                              
+                              // Even if API fails, still redirect (don't block user)
+                              if (!response.ok || data.code !== 1000) {
+                                console.warn("Failed to save join room history:", data?.message);
+                              }
+                            } else {
+                              console.warn("Missing userId or roomId for join room API");
+                            }
+                          } catch (error) {
+                            console.warn("Error calling join room API:", error);
+                            // Continue with redirect even if API fails
+                          }
+
+                          // Redirect to classRoom page
                           window.location.href = activeRoom.classRoomPath;
                         }
                       }}

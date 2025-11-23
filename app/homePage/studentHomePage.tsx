@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   CalendarDays,
   MessageSquare,
@@ -11,6 +11,9 @@ import {
   Loader2,
   ChevronDown,
   Filter,
+  UserPlus,
+  X,
+  Hash,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -21,6 +24,7 @@ import ScheduleCard from "@/components/ScheduleCard";
 
 const STUDENT_CLASSES_API = (studentId: string | number) =>
   `http://localhost:8080/education/api/class-students/classes/${studentId}`;
+const JOIN_CLASS_API = `http://localhost:8080/education/api/class-students/class-code`;
 
 interface ClassData {
   id: number;
@@ -138,6 +142,12 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [selectedSemester, setSelectedSemester] = useState<string>("all");
   const [isSemesterDropdownOpen, setIsSemesterDropdownOpen] = useState(false);
+  
+  // Join class modal state
+  const [showJoinClassModal, setShowJoinClassModal] = useState(false);
+  const [isJoiningClass, setIsJoiningClass] = useState(false);
+  const [joinClassError, setJoinClassError] = useState<string | null>(null);
+  const [classCode, setClassCode] = useState("");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -212,6 +222,72 @@ export default function HomePage() {
     }
   }, [authToken, studentId, fetchStudentClasses]);
 
+  const handleOpenJoinClassModal = () => {
+    setClassCode("");
+    setJoinClassError(null);
+    setShowJoinClassModal(true);
+  };
+
+  const handleCloseJoinClassModal = () => {
+    setShowJoinClassModal(false);
+    setClassCode("");
+    setJoinClassError(null);
+  };
+
+  const handleJoinClass = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!classCode.trim()) {
+      setJoinClassError("Vui lòng nhập mã lớp học");
+      return;
+    }
+
+    if (!authToken) {
+      setJoinClassError("Không tìm thấy thông tin đăng nhập. Vui lòng đăng nhập lại.");
+      return;
+    }
+
+    setIsJoiningClass(true);
+    setJoinClassError(null);
+
+    try {
+      const response = await fetch(JOIN_CLASS_API, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          code: classCode.trim(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || data.code !== 1000 || !data.result) {
+        throw new Error(
+          data?.message || "Không thể tham gia lớp học. Vui lòng kiểm tra lại mã lớp học."
+        );
+      }
+
+      // Success - close modal and reload classes
+      handleCloseJoinClassModal();
+      
+      // Reload classes list
+      if (authToken && studentId) {
+        await fetchStudentClasses(authToken, studentId);
+      }
+    } catch (err) {
+      setJoinClassError(
+        err instanceof Error
+          ? err.message
+          : "Không thể tham gia lớp học. Vui lòng thử lại sau."
+      );
+    } finally {
+      setIsJoiningClass(false);
+    }
+  };
+
   // Get unique semesters from classes
   const availableSemesters = useMemo(() => {
     const semesters = new Set<string>();
@@ -284,7 +360,20 @@ export default function HomePage() {
                   <h2 className="text-xl font-semibold text-slate-900">
                     Khóa học đang theo học
                   </h2>
+                  
+
                   <div className="flex items-center gap-3">
+                    {/* Join Class Button */}
+                    <button
+                      type="button"
+                      onClick={handleOpenJoinClassModal}
+                      className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-2 text-sm font-semibold text-white shadow-lg transition hover:shadow-xl hover:scale-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
+                    >
+                      <UserPlus className="w-4 h-4" />
+                      Tham gia lớp học
+                    </button>
+
+                    {/* Semester Filter Dropdown */}
                     {/* Semester Filter Dropdown */}
                     {availableSemesters.length > 0 && (
                       <div className="relative">
@@ -503,6 +592,97 @@ export default function HomePage() {
           </div>
         </section>
       </div>
+
+      {/* Join Class Modal */}
+      <AnimatePresence>
+        {showJoinClassModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+              onClick={handleCloseJoinClassModal}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden">
+                {/* Header */}
+                <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-emerald-50 to-teal-50">
+                  <button
+                    onClick={handleCloseJoinClassModal}
+                    className="absolute top-4 right-4 p-2 text-slate-600 hover:text-slate-900 hover:bg-white rounded-lg transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                  <h2 className="text-2xl font-bold text-slate-900 pr-12">
+                    Tham gia lớp học
+                  </h2>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Nhập mã lớp học để tham gia
+                  </p>
+                </div>
+
+                {/* Form Content */}
+                <form onSubmit={handleJoinClass} className="p-6">
+                  <div className="space-y-5">
+                    {/* Class Code Input */}
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-semibold text-slate-700 mb-2">
+                        <Hash className="w-4 h-4 text-emerald-500" />
+                        Mã lớp học <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={classCode}
+                        onChange={(e) => setClassCode(e.target.value.toUpperCase())}
+                        placeholder="Nhập mã lớp học (ví dụ: ABGT16)"
+                        className={`w-full rounded-xl border ${
+                          joinClassError
+                            ? "border-red-300 bg-red-50"
+                            : "border-slate-200 bg-white"
+                        } px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-all uppercase`}
+                        autoFocus
+                      />
+                      {joinClassError && (
+                        <p className="mt-1 text-sm text-red-600">
+                          {joinClassError}
+                        </p>
+                      )}
+                      <p className="mt-1 text-xs text-slate-500">
+                        Mã lớp học thường do giáo viên cung cấp
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex items-center justify-end gap-3 mt-6 pt-6 border-t border-slate-200">
+                    <button
+                      type="button"
+                      onClick={handleCloseJoinClassModal}
+                      className="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-semibold hover:bg-slate-50 transition-colors"
+                    >
+                      Hủy
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isJoiningClass}
+                      className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isJoiningClass ? "Đang tham gia..." : "Tham gia"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       <Footer />
     </main>
