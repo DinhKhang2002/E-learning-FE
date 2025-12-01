@@ -24,6 +24,7 @@ import {
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import DashboardClass from "@/components/DashboardClass";
 
 const CLASS_DETAIL_API = (classId: string | number) =>
   `http://localhost:8080/education/api/classes/${classId}`;
@@ -434,88 +435,100 @@ export default function StudentClassPage() {
             </motion.div>
           )}
 
-          {/* Class Information Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1, duration: 0.5 }}
-            className="mb-10"
-          >
-            <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-white/80 backdrop-blur-xl shadow-2xl p-8">
-              {/* Decorative Elements */}
-              <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-200/30 to-purple-200/30 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-              <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-pink-200/30 to-rose-200/30 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
+          <div className="grid gap-8 xl:grid-cols-[2fr,1fr]">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1, duration: 0.5 }}
+              className="space-y-8"
+            >
+              {/* Class Information Card */}
+              <div className="relative overflow-hidden rounded-3xl border border-white/20 bg-white/80 backdrop-blur-xl shadow-2xl p-8">
+                {/* Decorative Elements */}
+                <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-200/30 to-purple-200/30 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-pink-200/30 to-rose-200/30 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
 
-              <div className="relative">
-                <div className="flex items-start justify-between mb-6">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg">
-                        <Sparkles className="w-6 h-6 text-white" />
+                <div className="relative">
+                  <div className="flex items-start justify-between mb-6">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-3">
+                        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg">
+                          <Sparkles className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                          <h1 className="text-3xl font-bold text-slate-900 mb-1">
+                            {classData?.name || "Lớp học"}
+                          </h1>
+                          <p className="text-sm text-slate-500">
+                            Mã lớp:{" "}
+                            <span className="font-mono font-semibold text-indigo-600">
+                              {classData?.code}
+                            </span>
+                          </p>
+                        </div>
+                      </div>
+                      {classData?.description && (
+                        <p className="text-slate-600 leading-relaxed max-w-2xl">
+                          {classData.description}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+                    <div className="flex items-center gap-3 rounded-xl bg-gradient-to-br from-indigo-50 to-purple-50 p-4 border border-indigo-100">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500">
+                        <User className="w-5 h-5 text-white" />
                       </div>
                       <div>
-                        <h1 className="text-3xl font-bold text-slate-900 mb-1">
-                          {classData?.name || "Lớp học"}
-                        </h1>
-                        <p className="text-sm text-slate-500">
-                          Mã lớp: <span className="font-mono font-semibold text-indigo-600">{classData?.code}</span>
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                          Giảng viên
+                        </p>
+                        <p className="text-sm font-bold text-slate-900 mt-0.5">
+                          {classData?.teacherName || "—"}
                         </p>
                       </div>
                     </div>
-                    {classData?.description && (
-                      <p className="text-slate-600 leading-relaxed max-w-2xl">
-                        {classData.description}
-                      </p>
-                    )}
-                  </div>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
-                  <div className="flex items-center gap-3 rounded-xl bg-gradient-to-br from-indigo-50 to-purple-50 p-4 border border-indigo-100">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500">
-                      <User className="w-5 h-5 text-white" />
+                    <div className="flex items-center gap-3 rounded-xl bg-gradient-to-br from-pink-50 to-rose-50 p-4 border border-pink-100">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-pink-500">
+                        <CalendarDays className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                          Học kỳ
+                        </p>
+                        <p className="text-sm font-bold text-slate-900 mt-0.5">
+                          {classData?.semester ? `Học kỳ ${classData.semester}` : "—"}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                        Giảng viên
-                      </p>
-                      <p className="text-sm font-bold text-slate-900 mt-0.5">
-                        {classData?.teacherName || "—"}
-                      </p>
-                    </div>
-                  </div>
 
-                  <div className="flex items-center gap-3 rounded-xl bg-gradient-to-br from-pink-50 to-rose-50 p-4 border border-pink-100">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-pink-500">
-                      <CalendarDays className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                        Học kỳ
-                      </p>
-                      <p className="text-sm font-bold text-slate-900 mt-0.5">
-                        {classData?.semester ? `Học kỳ ${classData.semester}` : "—"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 p-4 border border-emerald-100">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500">
-                      <CalendarDays className="w-5 h-5 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                        Ngày tạo
-                      </p>
-                      <p className="text-sm font-bold text-slate-900 mt-0.5">
-                        {formatDate(classData?.createdAt || "")}
-                      </p>
+                    <div className="flex items-center gap-3 rounded-xl bg-gradient-to-br from-emerald-50 to-teal-50 p-4 border border-emerald-100">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-500">
+                        <CalendarDays className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+                          Ngày tạo
+                        </p>
+                        <p className="text-sm font-bold text-slate-900 mt-0.5">
+                          {formatDate(classData?.createdAt || "")}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
-          </motion.div>
+
+              {/* Dashboard */}
+              <DashboardClass
+                classId={classId}
+                authToken={authToken}
+                className={classData?.name}
+                canCreate={false}
+              />
+            </motion.div>
 
           {/* Student Sections */}
           <motion.div

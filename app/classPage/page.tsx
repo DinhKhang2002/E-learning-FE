@@ -9,6 +9,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ClassDetailInfo from "@/components/ClassDetailInfo";
 import ClassManagement from "@/components/ClassManagement";
+import DashboardClass from "@/components/DashboardClass";
 
 const CLASS_DETAIL_API = (classId: string | number) =>
   `http://localhost:8080/education/api/classes/${classId}`;
@@ -426,30 +427,43 @@ export default function ClassPage() {
             </motion.div>
           )}
 
-          {/* Class Detail Info */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1, duration: 0.4 }}
-            className="mb-8"
-          >
-            <ClassDetailInfo classData={classData} loading={loading} />
-          </motion.div>
+          <div className="grid gap-8 xl:grid-cols-[2fr,1fr]">
+            <div className="space-y-8">
+              {/* Class Detail Info */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.4 }}
+              >
+                <ClassDetailInfo classData={classData} loading={loading} />
+              </motion.div>
 
-          {/* Class Management */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.4 }}
-          >
-            <ClassManagement 
-              classId={classId} 
-              onCreateMeeting={handleCreateMeeting}
-              isTeacher={isTeacher}
-              isCreatingMeeting={isCreatingMeeting}
-              className={classData?.name}
-            />
-          </motion.div>
+              {/* Dashboard */}
+              <DashboardClass
+                classId={classId}
+                authToken={authToken}
+                className={classData?.name}
+                canCreate={isTeacher}
+              />
+            </div>
+
+            <div className="space-y-8">
+              {/* Class Management */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.4 }}
+              >
+                <ClassManagement
+                  classId={classId}
+                  onCreateMeeting={handleCreateMeeting}
+                  isTeacher={isTeacher}
+                  isCreatingMeeting={isCreatingMeeting}
+                  className={classData?.name}
+                />
+              </motion.div>
+            </div>
+          </div>
 
           {/* Error State */}
           {error && !loading && (
