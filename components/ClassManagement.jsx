@@ -14,6 +14,8 @@ import {
   Calendar,
   BookOpen as BookIcon,
   FileText as FileTextIcon,
+  ChevronRight,
+  Menu,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -24,56 +26,64 @@ const managementItems = [
     id: 1,
     label: "Quản lý học sinh",
     icon: Users,
-    color: "from-blue-500 to-cyan-500",
+    color: "text-blue-500",
+    bg: "bg-blue-50",
     href: "/classPage/students",
   },
   {
     id: 2,
     label: "Quản lý tài liệu",
     icon: BookOpen,
-    color: "from-indigo-500 to-purple-500",
+    color: "text-indigo-500",
+    bg: "bg-indigo-50",
     href: "/classPage/documents",
   },
   {
     id: 3,
     label: "Điểm danh",
     icon: CheckSquare,
-    color: "from-emerald-500 to-teal-500",
+    color: "text-emerald-500",
+    bg: "bg-emerald-50",
     href: "/classPage/attendance",
   },
   {
     id: 4,
     label: "Đơn xin nghỉ học",
     icon: ClipboardList,
-    color: "from-amber-500 to-orange-500",
+    color: "text-amber-500",
+    bg: "bg-amber-50",
     href: "/classPage/leave-requests",
   },
   {
     id: 5,
     label: "Bài tập về nhà",
     icon: FileText,
-    color: "from-pink-500 to-rose-500",
+    color: "text-pink-500",
+    bg: "bg-pink-50",
     href: "/classPage/assignments",
   },
   {
     id: 6,
     label: "Ngân hàng câu hỏi",
     icon: PenTool,
-    color: "from-violet-500 to-purple-500",
+    color: "text-violet-500",
+    bg: "bg-violet-50",
     href: "/classPage/question-bank",
   },
   {
     id: 7,
     label: "Quản lý đề thi",
     icon: GraduationCap,
-    color: "from-sky-500 to-blue-500",
+    color: "text-sky-500",
+    bg: "bg-sky-50",
     href: "/classPage/exams",
   },
   {
     id: 8,
     label: "Quản lý điểm",
     icon: Star,
-    color: "from-yellow-500 to-amber-500",
+    color: "text-yellow-500",
+    bg: "bg-yellow-50",
     href: "/classPage/grades",
   },
 ];
@@ -91,9 +101,18 @@ const SUBJECTS = [
   { value: "GENERAL", label: "Chung" },
 ];
 
-export default function ClassManagement({ classId, onCreateMeeting, isTeacher, isCreatingMeeting, className }) {
+export default function ClassManagement({
+  classId,
+  onCreateMeeting,
+  isTeacher,
+  isCreatingMeeting,
+  className,
+  // Remove the type annotation ": any" which is invalid in .jsx files
+}) {
   const router = useRouter();
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false); // State để kiểm soát việc mở rộng sidebar
+
   const [formData, setFormData] = useState({
     roomName: "",
     subject: "GENERAL",
@@ -111,11 +130,10 @@ export default function ClassManagement({ classId, onCreateMeeting, isTeacher, i
   };
 
   const handleOpenModal = () => {
-    // Set default values
     const now = new Date();
-    const defaultTime = new Date(now.getTime() + 5 * 60 * 1000); // 5 minutes from now
-    const defaultDateTime = defaultTime.toISOString().slice(0, 16); // Format for datetime-local input
-    
+    const defaultTime = new Date(now.getTime() + 5 * 60 * 1000);
+    const defaultDateTime = defaultTime.toISOString().slice(0, 16);
+
     setFormData({
       roomName: className ? `${className} - Cuộc họp` : "Cuộc họp mới",
       subject: "GENERAL",
@@ -133,11 +151,9 @@ export default function ClassManagement({ classId, onCreateMeeting, isTeacher, i
 
   const validateForm = () => {
     const errors = {};
-    
     if (!formData.roomName.trim()) {
       errors.roomName = "Vui lòng nhập tên cuộc họp";
     }
-    
     if (!formData.startTime) {
       errors.startTime = "Vui lòng chọn thời gian bắt đầu";
     } else {
@@ -147,109 +163,155 @@ export default function ClassManagement({ classId, onCreateMeeting, isTeacher, i
         errors.startTime = "Thời gian bắt đầu phải sau thời điểm hiện tại";
       }
     }
-    
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
-    // Convert datetime-local to ISO string
     const startTimeISO = new Date(formData.startTime).toISOString();
-    
     onCreateMeeting({
       roomName: formData.roomName.trim(),
       subject: formData.subject,
       startTime: startTimeISO,
       description: formData.description.trim() || `Cuộc họp ${formData.roomName}`,
     });
-    
     handleCloseModal();
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">
-            Thành phần quản lý lớp học
-          </h2>
-          <p className="mt-1 text-sm text-slate-500">
-            Chọn một thành phần để quản lý lớp học của bạn
-          </p>
-        </div>
-        {isTeacher && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.2 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={handleOpenModal}
-            disabled={isCreatingMeeting}
-            className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 px-5 py-3 text-sm font-semibold text-white shadow-lg transition-all hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Video className="w-5 h-5" />
-            {isCreatingMeeting ? "Đang tạo..." : "Tạo cuộc họp"}
-          </motion.button>
-        )}
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {managementItems.map((item, index) => {
-          const Icon = item.icon;
-          return (
-            <motion.button
-              key={item.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05, duration: 0.3 }}
-              whileHover={{ y: -4 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => handleClick(item.href)}
-              className="flex flex-col items-center gap-3 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-lg transition-all duration-200 group"
-            >
-              <div
-                className={`flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br ${item.color} shadow-lg group-hover:scale-110 transition-transform duration-200`}
+    <>
+      {/* Sidebar Container */}
+      <motion.div
+        initial={{ width: "4.5rem" }}
+        animate={{ width: isExpanded ? "18rem" : "4.5rem" }}
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        onMouseEnter={() => setIsExpanded(true)}
+        onMouseLeave={() => setIsExpanded(false)}
+        className="fixed left-4 top-24 bottom-4 z-40 flex flex-col rounded-3xl border border-white/20 bg-white/80 backdrop-blur-xl shadow-2xl overflow-hidden"
+      >
+        {/* Header / Logo Area */}
+        <div className="flex items-center h-20 px-5 border-b border-slate-100">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-slate-800 to-slate-900 text-white shadow-md">
+            <Menu className="w-5 h-5" />
+          </div>
+          <AnimatePresence>
+            {isExpanded && (
+              <motion.span
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -10 }}
+                className="ml-4 font-bold text-slate-800 whitespace-nowrap overflow-hidden"
               >
-                <Icon className="w-8 h-8 text-white" strokeWidth={1.8} />
-              </div>
-              <span className="text-sm font-semibold text-slate-700 text-center group-hover:text-slate-900 transition-colors">
-                {item.label}
-              </span>
-            </motion.button>
-          );
-        })}
-      </div>
+                Công cụ lớp học
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </div>
 
-      {/* Create Meeting Modal */}
+        {/* Action Button (Create Meeting) */}
+        {isTeacher && (
+          <div className="p-3 border-b border-slate-100">
+            <button
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent closing if sidebar behavior changes
+                handleOpenModal();
+              }}
+              className={`relative flex w-full items-center ${
+                isExpanded ? "justify-start px-4" : "justify-center"
+              } h-12 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-500 text-white shadow-lg transition-all hover:shadow-blue-500/25 hover:scale-[1.02]`}
+            >
+              <Video className="w-5 h-5 shrink-0" />
+              <AnimatePresence>
+                {isExpanded && (
+                  <motion.span
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: "auto" }}
+                    exit={{ opacity: 0, width: 0 }}
+                    className="ml-3 font-semibold whitespace-nowrap overflow-hidden"
+                  >
+                    Tạo cuộc họp
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </button>
+          </div>
+        )}
+
+        {/* Scrollable Menu Items */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden py-3 space-y-2 px-3 custom-scrollbar">
+          {managementItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                onClick={() => handleClick(item.href)}
+                className={`group flex w-full items-center ${
+                  isExpanded ? "justify-start px-3" : "justify-center"
+                } h-12 rounded-xl transition-all hover:bg-slate-100/80 relative`}
+              >
+                <div
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${item.bg} ${item.color} transition-transform group-hover:scale-110 shadow-sm`}
+                >
+                  <Icon className="w-5 h-5" />
+                </div>
+                
+                <AnimatePresence>
+                  {isExpanded && (
+                    <motion.span
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -10 }}
+                      className="ml-3 text-sm font-medium text-slate-700 whitespace-nowrap overflow-hidden group-hover:text-slate-900"
+                    >
+                      {item.label}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+
+                {/* Tooltip for collapsed state */}
+                {!isExpanded && (
+                  <div className="absolute left-full ml-4 hidden rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white opacity-0 shadow-xl transition-opacity group-hover:block group-hover:opacity-100 whitespace-nowrap z-50 pointer-events-none">
+                    {item.label}
+                    <div className="absolute left-0 top-1/2 -ml-1 -mt-1 h-2 w-2 -rotate-45 bg-slate-900" />
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Footer / Toggle Hint */}
+        <div className="p-4 border-t border-slate-100 flex justify-center">
+            <ChevronRight className={`w-5 h-5 text-slate-400 transition-transform duration-300 ${isExpanded ? "rotate-180" : ""}`} />
+        </div>
+      </motion.div>
+
+      {/* Create Meeting Modal - Giữ nguyên logic cũ */}
       <AnimatePresence>
         {showCreateModal && (
-          <>
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
               onClick={handleCloseModal}
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="fixed inset-0 z-50 flex items-center justify-center p-4"
-              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-2xl rounded-3xl border border-white/20 bg-white shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
             >
-              <div className="w-full max-w-2xl rounded-3xl border border-slate-200 bg-white shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-                {/* Header */}
-                <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-cyan-50">
+               {/* Giữ nguyên nội dung form Modal cũ ở đây */}
+               {/* Header */}
+                <div className="p-6 border-b border-slate-100 bg-gradient-to-r from-blue-50 to-cyan-50">
                   <button
                     onClick={handleCloseModal}
-                    className="absolute top-4 right-4 p-2 text-slate-600 hover:text-slate-900 hover:bg-white rounded-lg transition-colors"
+                    className="absolute top-4 right-4 p-2 text-slate-500 hover:text-slate-900 hover:bg-white rounded-full transition-colors"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -376,12 +438,10 @@ export default function ClassManagement({ classId, onCreateMeeting, isTeacher, i
                     </button>
                   </div>
                 </form>
-              </div>
             </motion.div>
-          </>
+          </div>
         )}
       </AnimatePresence>
-    </div>
+    </>
   );
 }
-

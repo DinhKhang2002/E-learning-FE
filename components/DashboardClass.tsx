@@ -10,14 +10,16 @@ import {
   Smile,
   Loader2,
   PlusCircle,
-  Hash,
   UserRound,
   FileText,
   FolderDown,
   Trash2,
   AlertCircle,
+  PenLine,
+  X,
 } from "lucide-react";
 
+// ... (Giữ nguyên phần khai báo API và Interface như cũ)
 const CLASS_POSTS_API = (classId: string | number) =>
   `http://localhost:8080/education/api/posts/class?classId=${classId}`;
 const CREATE_POST_API = "http://localhost:8080/education/api/posts/create";
@@ -68,7 +70,7 @@ interface DashboardClassProps {
   className?: string;
   canCreate?: boolean;
 }
-
+// ... (Giữ nguyên các interface UserInfo, Post, Comment, CommentsState như cũ)
 interface UserInfo {
   id: number;
   firstName?: string;
@@ -117,6 +119,7 @@ export default function DashboardClass({
   className,
   canCreate = false,
 }: DashboardClassProps) {
+  // ... (Giữ nguyên state và useEffect như cũ)
   const [token, setToken] = useState<string | null>(authTokenProp ?? null);
   const [checkedToken, setCheckedToken] = useState<boolean>(Boolean(authTokenProp));
   const [currentUser, setCurrentUser] = useState<UserInfo | null>(null);
@@ -124,6 +127,9 @@ export default function DashboardClass({
   const [posts, setPosts] = useState<Post[]>([]);
   const [postsLoading, setPostsLoading] = useState(true);
   const [postsError, setPostsError] = useState<string | null>(null);
+
+  // New State for Modal
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const [creatingPost, setCreatingPost] = useState(false);
   const [newPost, setNewPost] = useState({
@@ -138,134 +144,77 @@ export default function DashboardClass({
   const [commentsState, setCommentsState] = useState<Record<number, CommentsState>>({});
   const [commentInputs, setCommentInputs] = useState<Record<number, string>>({});
   const [userEmotions, setUserEmotions] = useState<Record<number, EmotionKey | null>>({});
-const [openComments, setOpenComments] = useState<Record<number, boolean>>({});
+  const [openComments, setOpenComments] = useState<Record<number, boolean>>({});
 
-  useEffect(() => {
+  // ... (Giữ nguyên useEffect và các hàm fetchPosts, handleReactToPost, handleToggleComments, handleSubmitComment, handleDeletePost)
+    useEffect(() => {
     if (typeof window === "undefined") return;
-  if (!token) {
-    const localToken = window.localStorage.getItem("accessToken");
-    if (localToken) {
-      setToken(localToken);
-    } else {
-      setCheckedToken(true);
-    }
-  } else {
-    setCheckedToken(true);
-  }
-
-    const storedUser = window.localStorage.getItem("user");
-    if (storedUser) {
-      try {
-        const parsed = JSON.parse(storedUser);
-        setCurrentUser(parsed);
-      } catch (error) {
-        console.warn("Failed to parse stored user", error);
-      }
-    }
-}, [token]);
-
-useEffect(() => {
-  if (checkedToken && token === null) {
-    setPostsLoading(false);
-    setPostsError("Không tìm thấy thông tin xác thực để tải nội dung lớp học.");
-  }
-}, [token, checkedToken]);
-
-  const fetchPosts = useCallback(
-    async (tokenValue: string, cId: string) => {
-      setPostsLoading(true);
-      setPostsError(null);
-      try {
-        const response = await fetch(CLASS_POSTS_API(cId), {
-          headers: {
-            Authorization: `Bearer ${tokenValue}`,
-            "Content-Type": "application/json",
-          },
-        });
-
-        const data = await response.json();
-        if (!response.ok || data.code !== 1000 || !Array.isArray(data.result)) {
-          throw new Error(data?.message || "Không thể tải bài đăng. Vui lòng thử lại.");
+    if (!token) {
+        const localToken = window.localStorage.getItem("accessToken");
+        if (localToken) {
+        setToken(localToken);
+        } else {
+        setCheckedToken(true);
         }
+    } else {
+        setCheckedToken(true);
+    }
 
-        setPosts(data.result as Post[]);
-      } catch (error) {
-        setPostsError(
-          error instanceof Error ? error.message : "Không thể tải bài đăng. Vui lòng thử lại sau."
-        );
-        setPosts([]);
-      } finally {
+        const storedUser = window.localStorage.getItem("user");
+        if (storedUser) {
+        try {
+            const parsed = JSON.parse(storedUser);
+            setCurrentUser(parsed);
+        } catch (error) {
+            console.warn("Failed to parse stored user", error);
+        }
+        }
+    }, [token]);
+
+    useEffect(() => {
+    if (checkedToken && token === null) {
         setPostsLoading(false);
-      }
-    },
-    []
-  );
-
-  useEffect(() => {
-    if (token && classId) {
-      fetchPosts(token, classId);
+        setPostsError("Không tìm thấy thông tin xác thực để tải nội dung lớp học.");
     }
-  }, [token, classId, fetchPosts]);
+    }, [token, checkedToken]);
 
-  const handleCreatePost = async () => {
-    if (!token || !classId || !currentUser) {
-      setPostsError("Thiếu thông tin xác thực. Vui lòng đăng nhập lại.");
-      return;
-    }
+    const fetchPosts = useCallback(
+        async (tokenValue: string, cId: string) => {
+        setPostsLoading(true);
+        setPostsError(null);
+        try {
+            const response = await fetch(CLASS_POSTS_API(cId), {
+            headers: {
+                Authorization: `Bearer ${tokenValue}`,
+                "Content-Type": "application/json",
+            },
+            });
 
-    if (!newPost.title.trim() || !newPost.content.trim()) {
-      setPostsError("Vui lòng nhập tiêu đề và nội dung bài đăng.");
-      return;
-    }
+            const data = await response.json();
+            if (!response.ok || data.code !== 1000 || !Array.isArray(data.result)) {
+            throw new Error(data?.message || "Không thể tải bài đăng. Vui lòng thử lại.");
+            }
 
-    setCreatingPost(true);
-    setPostsError(null);
-
-    try {
-      const formData = new FormData();
-      formData.append("poster", String(currentUser.id));
-      formData.append("classId", classId);
-      formData.append("postTypeId", newPost.postTypeId);
-      formData.append("postTitle", newPost.title.trim());
-      formData.append("postContent", newPost.content.trim());
-      formData.append("postIcon", newPost.icon || DEFAULT_ICON);
-      formData.append("postBackground", newPost.background || DEFAULT_BACKGROUND);
-      if (attachment) {
-        formData.append("file", attachment);
-      }
-
-      const response = await fetch(CREATE_POST_API, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
+            setPosts(data.result as Post[]);
+        } catch (error) {
+            setPostsError(
+            error instanceof Error ? error.message : "Không thể tải bài đăng. Vui lòng thử lại sau."
+            );
+            setPosts([]);
+        } finally {
+            setPostsLoading(false);
+        }
         },
-        body: formData,
-      });
+        []
+    );
 
-      const data = await response.json();
-      if (!response.ok || data.code !== 1000 || !data.result) {
-        throw new Error(data?.message || "Không thể tạo bài đăng. Vui lòng thử lại.");
-      }
+    useEffect(() => {
+        if (token && classId) {
+        fetchPosts(token, classId);
+        }
+    }, [token, classId, fetchPosts]);
 
-      setNewPost({
-        title: "",
-        content: "",
-        icon: DEFAULT_ICON,
-        background: DEFAULT_BACKGROUND,
-        postTypeId: "1",
-      });
-      setAttachment(null);
-      fetchPosts(token, classId);
-    } catch (error) {
-      setPostsError(
-        error instanceof Error ? error.message : "Không thể tạo bài đăng. Vui lòng thử lại sau."
-      );
-    } finally {
-      setCreatingPost(false);
-    }
-  };
-
-  const handleReactToPost = async (postId: number, emotion: EmotionKey) => {
+     const handleReactToPost = async (postId: number, emotion: EmotionKey) => {
     if (!token || !currentUser) return;
 
     try {
@@ -429,6 +378,66 @@ useEffect(() => {
     }
   };
 
+  // Modified handleCreatePost to close modal on success
+  const handleCreatePost = async () => {
+    if (!token || !classId || !currentUser) {
+      setPostsError("Thiếu thông tin xác thực. Vui lòng đăng nhập lại.");
+      return;
+    }
+
+    if (!newPost.title.trim() || !newPost.content.trim()) {
+      setPostsError("Vui lòng nhập tiêu đề và nội dung bài đăng.");
+      return;
+    }
+
+    setCreatingPost(true);
+    setPostsError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("poster", String(currentUser.id));
+      formData.append("classId", classId);
+      formData.append("postTypeId", newPost.postTypeId);
+      formData.append("postTitle", newPost.title.trim());
+      formData.append("postContent", newPost.content.trim());
+      formData.append("postIcon", newPost.icon || DEFAULT_ICON);
+      formData.append("postBackground", newPost.background || DEFAULT_BACKGROUND);
+      if (attachment) {
+        formData.append("file", attachment);
+      }
+
+      const response = await fetch(CREATE_POST_API, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (!response.ok || data.code !== 1000 || !data.result) {
+        throw new Error(data?.message || "Không thể tạo bài đăng. Vui lòng thử lại.");
+      }
+
+      setNewPost({
+        title: "",
+        content: "",
+        icon: DEFAULT_ICON,
+        background: DEFAULT_BACKGROUND,
+        postTypeId: "1",
+      });
+      setAttachment(null);
+      fetchPosts(token, classId);
+      setShowCreateModal(false); // Close Modal on success
+    } catch (error) {
+      setPostsError(
+        error instanceof Error ? error.message : "Không thể tạo bài đăng. Vui lòng thử lại sau."
+      );
+    } finally {
+      setCreatingPost(false);
+    }
+  };
+
   const formattedClassName = useMemo(() => {
     if (!className) return "Lớp học";
     return className.length > 32 ? `${className.slice(0, 32)}...` : className;
@@ -466,6 +475,8 @@ useEffect(() => {
                 Cập nhật hoạt động, trao đổi và tương tác cùng học viên
               </p>
             </div>
+            
+            {/* Emotions Legend */}
             <div className="flex items-center gap-3 rounded-2xl bg-white px-4 py-2 shadow-lg border border-slate-100">
               <Smile className="w-5 h-5 text-emerald-500" />
               <div>
@@ -477,199 +488,23 @@ useEffect(() => {
             </div>
           </div>
 
+          {/* New Post Trigger */}
           {canCreate ? (
-            <div className="rounded-2xl border border-slate-100 bg-white shadow-[0_20px_45px_-32px_rgba(15,23,42,0.45)] p-6 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 text-white font-semibold shadow-inner">
-                  {currentUser?.firstName?.[0] ?? "T"}
+            <motion.div 
+                whileHover={{ scale: 1.01 }}
+                className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm flex items-center gap-4 cursor-pointer hover:shadow-md transition-all"
+                onClick={() => setShowCreateModal(true)}
+            >
+                <div className="h-10 w-10 ml-2 flex items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                    <PenLine className="w-5 h-5" />
                 </div>
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">
-                    {currentUser
-                      ? `${currentUser.firstName ?? ""} ${currentUser.lastName ?? ""}`.trim() ||
-                        currentUser.name ||
-                        currentUser.email
-                      : "Giáo viên"}
-                  </p>
-                  <p className="text-xs text-slate-500">Chia sẻ bài đăng mới</p>
+                <div className="flex-1 rounded-xl bg-slate-50 py-3 px-4 text-slate-500 hover:bg-slate-100 transition-colors text-sm">
+                    Chia sẻ thông báo hoặc bài học mới với lớp học...
                 </div>
-              </div>
-
-              <div className="grid gap-4 lg:grid-cols-2">
-                <div className="space-y-3">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    Tiêu đề bài đăng
-                  </label>
-                  <input
-                    value={newPost.title}
-                    onChange={(e) =>
-                      setNewPost((prev) => ({ ...prev, title: e.target.value }))
-                    }
-                    placeholder="Nhập tiêu đề"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  />
-                </div>
-                <div className="space-y-3">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    Icon bài đăng
-                  </label>
-                  <div className="flex items-center gap-3">
-                    <input
-                      value={newPost.icon}
-                      onChange={(e) =>
-                        setNewPost((prev) => ({ ...prev, icon: e.target.value }))
-                      }
-                      placeholder="URL icon"
-                      className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                    />
-                    <div className="flex items-center gap-1">
-                      {ICON_PRESETS.map((iconUrl) => (
-                        <button
-                          key={iconUrl}
-                          type="button"
-                          onClick={() =>
-                            setNewPost((prev) => ({ ...prev, icon: iconUrl }))
-                          }
-                          className={`flex h-10 w-10 items-center justify-center rounded-xl border ${
-                            newPost.icon === iconUrl
-                              ? "border-emerald-500 bg-emerald-50"
-                              : "border-slate-200 bg-white"
-                          }`}
-                        >
-                          <img src={iconUrl} alt="" className="h-6 w-6 object-contain" />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  Nội dung bài đăng
-                </label>
-                <textarea
-                  value={newPost.content}
-                  onChange={(e) =>
-                    setNewPost((prev) => ({ ...prev, content: e.target.value }))
-                  }
-                  placeholder="Chia sẻ thông tin với lớp học..."
-                  rows={4}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
-                />
-              </div>
-
-              <div className="grid gap-4 lg:grid-cols-2">
-                <div className="space-y-3">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    Hình nền
-                  </label>
-                  <input
-                    value={newPost.background}
-                    onChange={(e) =>
-                      setNewPost((prev) => ({ ...prev, background: e.target.value }))
-                    }
-                    placeholder="URL hình nền"
-                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
-                  />
-                  <div className="flex items-center gap-2 overflow-x-auto">
-                    {BACKGROUND_PRESETS.map((bgUrl, index) => (
-                      <button
-                        key={index}
-                        type="button"
-                        onClick={() =>
-                          setNewPost((prev) => ({ ...prev, background: bgUrl }))
-                        }
-                        className={`h-12 w-16 flex-shrink-0 rounded-xl border ${
-                          newPost.background === bgUrl
-                            ? "border-emerald-500 ring-2 ring-emerald-200"
-                            : "border-slate-200"
-                        }`}
-                        style={{
-                          backgroundImage: `url(${bgUrl})`,
-                          backgroundSize: "cover",
-                          backgroundPosition: "center",
-                        }}
-                      />
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-3">
-                  <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    Tệp đính kèm
-                  </label>
-                  <div className="relative rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center">
-                    <input
-                      id="attachment"
-                      type="file"
-                      className="hidden"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setAttachment(file);
-                        }
-                      }}
-                    />
-                    <label
-                      htmlFor="attachment"
-                      className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 cursor-pointer"
-                    >
-                      <Paperclip className="w-4 h-4" />
-                      {attachment ? attachment.name : "Chọn tệp đính kèm"}
-                    </label>
-                    {attachment && (
-                      <p className="text-xs text-slate-400 mt-2">
-                        {(attachment.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {postsError && (
-                <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
-                  {postsError}
-                </div>
-              )}
-
-              <div className="flex items-center justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setNewPost({
-                      title: "",
-                      content: "",
-                      icon: DEFAULT_ICON,
-                      background: DEFAULT_BACKGROUND,
-                      postTypeId: "1",
-                    });
-                    setAttachment(null);
-                  }}
-                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
-                >
-                  Làm mới
+                <button className="mr-2 p-2 rounded-full bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-md hover:shadow-lg transition-all">
+                    <PlusCircle className="w-5 h-5" />
                 </button>
-                <button
-                  type="button"
-                  onClick={handleCreatePost}
-                  disabled={creatingPost}
-                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-3 text-sm font-semibold text-white shadow-lg hover:shadow-xl disabled:opacity-50"
-                >
-                  {creatingPost ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Đang đăng...
-                    </>
-                  ) : (
-                    <>
-                      <PlusCircle className="w-4 h-4" />
-                      Đăng bài
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
+            </motion.div>
           ) : (
             <div className="rounded-2xl border border-slate-100 bg-white/80 p-6 text-sm text-slate-600">
               <p>
@@ -681,7 +516,240 @@ useEffect(() => {
         </div>
       </motion.div>
 
+      {/* Create Post Modal */}
+      <AnimatePresence>
+        {showCreateModal && (
+            <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+                    onClick={() => setShowCreateModal(false)}
+                />
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                    className="relative w-full max-w-3xl rounded-3xl border border-white/20 bg-white shadow-2xl overflow-hidden max-h-[90vh] flex flex-col"
+                >
+                    <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 to-white">
+                        <h3 className="text-lg font-bold text-slate-800">Tạo bài đăng mới</h3>
+                        <button 
+                            onClick={() => setShowCreateModal(false)}
+                            className="p-2 rounded-full hover:bg-slate-100 transition-colors text-slate-500"
+                        >
+                            <X className="w-5 h-5" />
+                        </button>
+                    </div>
+
+                    <div className="p-6 overflow-y-auto custom-scrollbar">
+                         {/* Original Form Content Moved Here */}
+                        <div className="space-y-4">
+                            <div className="flex items-center gap-3 mb-4">
+                                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 text-white font-semibold shadow-inner">
+                                {currentUser?.firstName?.[0] ?? "T"}
+                                </div>
+                                <div>
+                                <p className="text-sm font-semibold text-slate-900">
+                                    {currentUser
+                                    ? `${currentUser.firstName ?? ""} ${currentUser.lastName ?? ""}`.trim() ||
+                                        currentUser.name ||
+                                        currentUser.email
+                                    : "Giáo viên"}
+                                </p>
+                                <div className="flex items-center gap-1 text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full w-fit mt-1">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                                    Đang hoạt động
+                                </div>
+                                </div>
+                            </div>
+
+                            <div className="grid gap-4 lg:grid-cols-2">
+                                <div className="space-y-2">
+                                <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                    Tiêu đề bài đăng
+                                </label>
+                                <input
+                                    value={newPost.title}
+                                    onChange={(e) =>
+                                    setNewPost((prev) => ({ ...prev, title: e.target.value }))
+                                    }
+                                    placeholder="Nhập tiêu đề"
+                                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                />
+                                </div>
+                                <div className="space-y-2">
+                                <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                    Icon bài đăng
+                                </label>
+                                <div className="flex items-center gap-3">
+                                    <input
+                                    value={newPost.icon}
+                                    onChange={(e) =>
+                                        setNewPost((prev) => ({ ...prev, icon: e.target.value }))
+                                    }
+                                    placeholder="URL icon"
+                                    className="flex-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                    />
+                                    <div className="flex items-center gap-1">
+                                    {ICON_PRESETS.map((iconUrl) => (
+                                        <button
+                                        key={iconUrl}
+                                        type="button"
+                                        onClick={() =>
+                                            setNewPost((prev) => ({ ...prev, icon: iconUrl }))
+                                        }
+                                        className={`flex h-10 w-10 items-center justify-center rounded-xl border ${
+                                            newPost.icon === iconUrl
+                                            ? "border-emerald-500 bg-emerald-50"
+                                            : "border-slate-200 bg-white"
+                                        }`}
+                                        >
+                                        <img src={iconUrl} alt="" className="h-6 w-6 object-contain" />
+                                        </button>
+                                    ))}
+                                    </div>
+                                </div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                Nội dung bài đăng
+                                </label>
+                                <textarea
+                                value={newPost.content}
+                                onChange={(e) =>
+                                    setNewPost((prev) => ({ ...prev, content: e.target.value }))
+                                }
+                                placeholder="Chia sẻ thông tin với lớp học..."
+                                rows={6}
+                                className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
+                                />
+                            </div>
+
+                            <div className="grid gap-4 lg:grid-cols-2">
+                                <div className="space-y-2">
+                                <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                    Hình nền
+                                </label>
+                                <input
+                                    value={newPost.background}
+                                    onChange={(e) =>
+                                    setNewPost((prev) => ({ ...prev, background: e.target.value }))
+                                    }
+                                    placeholder="URL hình nền"
+                                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                />
+                                <div className="flex items-center gap-2 overflow-x-auto py-2">
+                                    {BACKGROUND_PRESETS.map((bgUrl, index) => (
+                                    <button
+                                        key={index}
+                                        type="button"
+                                        onClick={() =>
+                                        setNewPost((prev) => ({ ...prev, background: bgUrl }))
+                                        }
+                                        className={`h-12 w-16 flex-shrink-0 rounded-xl border ${
+                                        newPost.background === bgUrl
+                                            ? "border-emerald-500 ring-2 ring-emerald-200"
+                                            : "border-slate-200"
+                                        }`}
+                                        style={{
+                                        backgroundImage: `url(${bgUrl})`,
+                                        backgroundSize: "cover",
+                                        backgroundPosition: "center",
+                                        }}
+                                    />
+                                    ))}
+                                </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
+                                    Tệp đính kèm
+                                </label>
+                                <div className="relative rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-6 text-center hover:bg-slate-100 transition-colors">
+                                    <input
+                                    id="attachment"
+                                    type="file"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                        setAttachment(file);
+                                        }
+                                    }}
+                                    />
+                                    <label
+                                    htmlFor="attachment"
+                                    className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 cursor-pointer"
+                                    >
+                                    <Paperclip className="w-4 h-4" />
+                                    {attachment ? attachment.name : "Chọn tệp đính kèm"}
+                                    </label>
+                                    {attachment && (
+                                    <p className="text-xs text-slate-400 mt-2">
+                                        {(attachment.size / 1024 / 1024).toFixed(2)} MB
+                                    </p>
+                                    )}
+                                </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* Footer Actions */}
+                    <div className="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+                         <div className="flex-1">
+                            {postsError && (
+                                <p className="text-xs text-red-500 truncate mr-2">{postsError}</p>
+                            )}
+                         </div>
+                         <div className="flex items-center gap-3">
+                             <button
+                                type="button"
+                                onClick={() => {
+                                    setNewPost({
+                                    title: "",
+                                    content: "",
+                                    icon: DEFAULT_ICON,
+                                    background: DEFAULT_BACKGROUND,
+                                    postTypeId: "1",
+                                    });
+                                    setAttachment(null);
+                                }}
+                                className="px-4 py-2 text-sm font-semibold text-slate-600 hover:text-slate-800"
+                                >
+                                Làm mới
+                            </button>
+                            <button
+                                type="button"
+                                onClick={handleCreatePost}
+                                disabled={creatingPost}
+                                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg hover:shadow-xl disabled:opacity-50 transition-all"
+                                >
+                                {creatingPost ? (
+                                    <>
+                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    Đang đăng...
+                                    </>
+                                ) : (
+                                    <>
+                                    <PlusCircle className="w-4 h-4" />
+                                    Đăng bài
+                                    </>
+                                )}
+                            </button>
+                         </div>
+                    </div>
+                </motion.div>
+            </div>
+        )}
+      </AnimatePresence>
+
       <div className="space-y-6">
+         {/* Giữ nguyên phần hiển thị danh sách bài post (posts.map...) */}
         {postsLoading ? (
           <div className="rounded-3xl border border-slate-100 bg-white/80 p-10 text-center">
             <Loader2 className="w-10 h-10 animate-spin text-slate-400 mx-auto mb-4" />
@@ -706,6 +774,7 @@ useEffect(() => {
           </div>
         ) : (
           posts.map((post) => (
+             // ... Phần hiển thị Post giữ nguyên như code cũ
             <motion.article
               key={post.id}
               initial={{ opacity: 0, y: 20 }}
@@ -907,5 +976,3 @@ useEffect(() => {
     </div>
   );
 }
-
-

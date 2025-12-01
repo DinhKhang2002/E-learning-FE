@@ -7,17 +7,9 @@ import {
   ChevronRight,
   Home,
   Loader2,
-  CheckSquare,
-  FileText,
-  BookOpen,
-  GraduationCap,
-  Star,
   CalendarDays,
-  Hash,
   User,
   Sparkles,
-  ArrowRight,
-  ClipboardList,
   Video,
   X,
 } from "lucide-react";
@@ -25,6 +17,7 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import DashboardClass from "@/components/DashboardClass";
+import StudentClassManagement from "@/components/StudentClassManagement"; // Import Sidebar mới
 
 const CLASS_DETAIL_API = (classId: string | number) =>
   `http://localhost:8080/education/api/classes/${classId}`;
@@ -70,61 +63,13 @@ interface RoomInfo {
   roomName: string;
   classRoomPath: string;
   status: string;
-  roomId?: number; // Room ID from API response
+  roomId?: number;
 }
 
 interface CheckRoomsResponse {
   hasRoom: boolean;
   listRooms: RoomResponse[] | null;
 }
-
-const studentSections = [
-  {
-    id: 1,
-    label: "Điểm danh & Xin nghỉ",
-    icon: CheckSquare,
-    color: "from-emerald-500 via-teal-500 to-cyan-500",
-    hoverColor: "hover:from-emerald-600 hover:via-teal-600 hover:to-cyan-600",
-    href: "/studentClassAction/AttandenceAction",
-    description: "Xem lịch sử điểm danh và gửi đơn xin nghỉ",
-  },
-  {
-    id: 2,
-    label: "Tài liệu lớp",
-    icon: BookOpen,
-    color: "from-indigo-500 via-purple-500 to-pink-500",
-    hoverColor: "hover:from-indigo-600 hover:via-purple-600 hover:to-pink-600",
-    href: "/studentClassAction/DocumentAction",
-    description: "Tải xuống và xem tài liệu học tập",
-  },
-  {
-    id: 3,
-    label: "Bài tập được giao",
-    icon: FileText,
-    color: "from-blue-500 via-cyan-500 to-sky-500",
-    hoverColor: "hover:from-blue-600 hover:via-cyan-600 hover:to-sky-600",
-    href: "/studentClassAction/AssignmentAction",
-    description: "Xem và nộp bài tập về nhà",
-  },
-  {
-    id: 4,
-    label: "Hệ thống thi online",
-    icon: GraduationCap,
-    color: "from-amber-500 via-orange-500 to-red-500",
-    hoverColor: "hover:from-amber-600 hover:via-orange-600 hover:to-red-600",
-    href: "/studentClassAction/ExamAction",
-    description: "Tham gia các kỳ thi trực tuyến",
-  },
-  {
-    id: 5,
-    label: "Xem điểm",
-    icon: Star,
-    color: "from-yellow-500 via-amber-500 to-orange-500",
-    hoverColor: "hover:from-yellow-600 hover:via-amber-600 hover:to-orange-600",
-    href: "/studentClassAction/ScoreAction",
-    description: "Xem điểm các bài tập và kỳ thi",
-  },
-];
 
 function formatDate(input: string) {
   if (!input) return "—";
@@ -223,7 +168,6 @@ export default function StudentClassPage() {
         if (response.ok && data.code === 1000 && data.result) {
           const result = data.result as CheckRoomsResponse;
           if (result.hasRoom && result.listRooms && result.listRooms.length > 0) {
-            // Get the first active room
             const room = result.listRooms[0];
             if (room.classRoomPath) {
               setActiveRoom({
@@ -231,7 +175,7 @@ export default function StudentClassPage() {
                 roomName: room.roomName,
                 classRoomPath: room.classRoomPath,
                 status: room.status,
-                roomId: (room as any).id || undefined, // Try to get id from response
+                roomId: (room as any).id || undefined,
               });
             }
           } else {
@@ -240,7 +184,6 @@ export default function StudentClassPage() {
         }
       } catch (err) {
         console.warn("Failed to check active rooms:", err);
-        // Don't set error, just silently fail
       }
     },
     []
@@ -249,21 +192,12 @@ export default function StudentClassPage() {
   useEffect(() => {
     if (authToken && classId) {
       checkActiveRooms(authToken, classId);
-      // Poll every 30 seconds to check for new rooms
       const interval = setInterval(() => {
         checkActiveRooms(authToken, classId);
       }, 30000);
       return () => clearInterval(interval);
     }
   }, [authToken, classId, checkActiveRooms]);
-
-  const handleSectionClick = (href: string) => {
-    if (classId) {
-      router.push(`${href}?classId=${classId}`);
-    } else {
-      router.push(href);
-    }
-  };
 
   if (loading) {
     return (
@@ -323,7 +257,11 @@ export default function StudentClassPage() {
           <div className="absolute -bottom-8 left-1/2 w-72 h-72 bg-indigo-300 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-4000" />
         </div>
 
-        <section className="mx-auto w-full max-w-7xl px-6 pb-16 pt-8 lg:px-8">
+        {/* Thanh bên cho học sinh (Sidebar) */}
+        <StudentClassManagement classId={classId} />
+
+        {/* Nội dung chính: Thêm padding-left để tránh sidebar */}
+        <section className="mx-auto w-full max-w-7xl px-6 pb-16 pt-8 lg:px-8 pl-24">
           {/* Breadcrumb Navigation */}
           <motion.nav
             initial={{ opacity: 0, y: -10 }}
@@ -368,53 +306,34 @@ export default function StudentClassPage() {
                       onClick={async () => {
                         if (activeRoom.classRoomPath && authToken) {
                           try {
-                            // Get userId from localStorage
                             const storedUser = window.localStorage.getItem("user");
                             let userId: number | null = null;
-
                             if (storedUser) {
-                              try {
-                                const user = JSON.parse(storedUser);
-                                userId = user.id || null;
-                              } catch (error) {
-                                console.warn("Failed to parse user info", error);
-                              }
+                                try {
+                                    const user = JSON.parse(storedUser);
+                                    userId = user.id || null;
+                                } catch (error) {
+                                    console.warn("Failed to parse user info", error);
+                                }
                             }
-
-                            // Get roomId - try from activeRoom
-                            // Note: roomId should come from the API response (check rooms API)
-                            // If not available, we'll skip the join API call but still redirect
                             const roomId = activeRoom.roomId;
-
                             if (userId && roomId) {
-                              // Call join room API
                               const response = await fetch(JOIN_ROOM_API, {
                                 method: "POST",
                                 headers: {
                                   Authorization: `Bearer ${authToken}`,
                                   "Content-Type": "application/json",
                                 },
-                                body: JSON.stringify({
-                                  roomId: roomId,
-                                  userId: userId,
-                                }),
+                                body: JSON.stringify({ roomId: roomId, userId: userId }),
                               });
-
                               const data = await response.json();
-                              
-                              // Even if API fails, still redirect (don't block user)
                               if (!response.ok || data.code !== 1000) {
                                 console.warn("Failed to save join room history:", data?.message);
                               }
-                            } else {
-                              console.warn("Missing userId or roomId for join room API");
                             }
                           } catch (error) {
                             console.warn("Error calling join room API:", error);
-                            // Continue with redirect even if API fails
                           }
-
-                          // Redirect to classRoom page
                           window.location.href = activeRoom.classRoomPath;
                         }
                       }}
@@ -435,7 +354,8 @@ export default function StudentClassPage() {
             </motion.div>
           )}
 
-          <div className="grid gap-8 xl:grid-cols-[2fr,1fr]">
+          {/* Main Content Area (Center Column) */}
+          <div className="max-w-5xl mx-auto space-y-8">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -526,75 +446,10 @@ export default function StudentClassPage() {
                 classId={classId}
                 authToken={authToken}
                 className={classData?.name}
-                canCreate={false}
+                canCreate={false} // Học sinh không được tạo bài đăng (tùy logic business)
               />
             </motion.div>
-
-          {/* Student Sections */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.5 }}
-            className="mb-8"
-          >
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-slate-900 mb-2">
-                Thành phần lớp học
-              </h2>
-              <p className="text-slate-600">
-                Chọn một thành phần để bắt đầu học tập
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {studentSections.map((section, index) => {
-                const Icon = section.icon;
-                return (
-                  <motion.button
-                    key={section.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 + index * 0.1, duration: 0.4 }}
-                    whileHover={{ y: -8, scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => handleSectionClick(section.href)}
-                    className="group relative overflow-hidden rounded-2xl border border-white/20 bg-white/90 backdrop-blur-sm p-6 shadow-lg hover:shadow-2xl transition-all duration-300 text-left"
-                  >
-                    {/* Gradient Background on Hover */}
-                    <div
-                      className={`absolute inset-0 bg-gradient-to-br ${section.color} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}
-                    />
-
-                    {/* Icon */}
-                    <div className="relative mb-4">
-                      <div
-                        className={`flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br ${section.color} ${section.hoverColor} shadow-lg group-hover:scale-110 transition-transform duration-300`}
-                      >
-                        <Icon className="w-8 h-8 text-white" strokeWidth={1.8} />
-                      </div>
-                    </div>
-
-                    {/* Content */}
-                    <div className="relative">
-                      <h3 className="text-lg font-bold text-slate-900 mb-2 group-hover:text-indigo-600 transition-colors">
-                        {section.label}
-                      </h3>
-                      <p className="text-sm text-slate-600 mb-4 line-clamp-2">
-                        {section.description}
-                      </p>
-                      <div className="flex items-center gap-2 text-indigo-600 font-semibold text-sm group-hover:gap-3 transition-all">
-                        <span>Xem chi tiết</span>
-                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                      </div>
-                    </div>
-
-                    {/* Shine Effect */}
-                    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-700 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
-                  </motion.button>
-                );
-              })}
-            </div>
-          </motion.div>
+          </div>
 
           {/* Error Message (if any) */}
           {error && classData && (
@@ -613,4 +468,3 @@ export default function StudentClassPage() {
     </main>
   );
 }
-
