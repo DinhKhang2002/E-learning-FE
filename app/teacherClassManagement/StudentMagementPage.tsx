@@ -25,6 +25,7 @@ import {
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
+import MessagingModal from "@/components/MessagingModal";
 
 const CLASS_DETAIL_API = (classId: string | number) =>
   `http://localhost:8080/education/api/classes/${classId}`;
@@ -87,6 +88,9 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
   const [deletingStudentId, setDeletingStudentId] = useState<number | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [showMessagingModal, setShowMessagingModal] = useState(false);
+  const [selectedStudentForMessaging, setSelectedStudentForMessaging] = useState<Student | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -97,6 +101,19 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
       setLoading(false);
       setError("Không tìm thấy thông tin đăng nhập. Vui lòng đăng nhập lại.");
       router.push("/login");
+    }
+
+    // Get current user ID
+    const userRaw = window.localStorage.getItem("user");
+    if (userRaw) {
+      try {
+        const user = JSON.parse(userRaw);
+        if (user.id) {
+          setCurrentUserId(user.id);
+        }
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+      }
     }
   }, [router]);
 
@@ -258,6 +275,16 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
   const handleViewDetail = (student: Student) => {
     setSelectedStudent(student);
     setDetailOpen(true);
+  };
+
+  const handleOpenMessaging = (student: Student) => {
+    setSelectedStudentForMessaging(student);
+    setShowMessagingModal(true);
+  };
+
+  const handleCloseMessaging = () => {
+    setShowMessagingModal(false);
+    setSelectedStudentForMessaging(null);
   };
 
   const filteredStudents = useMemo(() => {
@@ -512,6 +539,7 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
                               <Eye className="w-4 h-4" />
                             </button>
                             <button
+                              onClick={() => handleOpenMessaging(student)}
                               className="p-2 text-slate-600 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
                               title="Nhắn tin"
                             >
@@ -782,6 +810,19 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
             </div>
           </div>
         </div>
+      )}
+
+      {/* Messaging Modal */}
+      {showMessagingModal && selectedStudentForMessaging && currentUserId && authToken && (
+        <MessagingModal
+          isOpen={showMessagingModal}
+          onClose={handleCloseMessaging}
+          currentUserId={currentUserId}
+          toUserId={selectedStudentForMessaging.id}
+          toUserName={`${selectedStudentForMessaging.firstName} ${selectedStudentForMessaging.lastName}`}
+          toUserAvatar={selectedStudentForMessaging.avatar || "/default-avatar.png"}
+          authToken={authToken}
+        />
       )}
     </main>
   );

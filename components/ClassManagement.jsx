@@ -107,7 +107,6 @@ export default function ClassManagement({
   isTeacher,
   isCreatingMeeting,
   className,
-  // Remove the type annotation ": any" which is invalid in .jsx files
 }) {
   const router = useRouter();
   const [showCreateModal, setShowCreateModal] = useState(false);

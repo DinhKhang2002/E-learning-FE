@@ -1,10 +1,11 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { Menu, X, LogOut, User, Settings, BookOpen } from "lucide-react";
+import { Menu, X, LogOut, User, Settings, BookOpen, MessageSquare } from "lucide-react";
 import clsx from "clsx";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Notification from "./Notification";
+import Messenger from "./Messenger";
 
 type StoredUser = {
   id?: number;
@@ -35,6 +36,8 @@ export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [user, setUser] = useState<StoredUser | null>(null);
+  const [showMessenger, setShowMessenger] = useState(false);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const router = useRouter();
 
   const syncAuthState = () => {
@@ -56,9 +59,54 @@ export default function Navbar() {
     }
   };
 
+  // Fetch unread notification count
+  const fetchUnreadNotificationCount = async () => {
+    if (typeof window === "undefined") return;
+    const token = window.localStorage.getItem("accessToken");
+    const userRaw = window.localStorage.getItem("user");
+    
+    if (!token || !userRaw) {
+      setUnreadNotificationCount(0);
+      return;
+    }
+
+    try {
+      const user = JSON.parse(userRaw);
+      if (!user?.id) return;
+
+      const response = await fetch(
+        `http://localhost:8080/education/api/notices/${user.id}/count`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const data = await response.json();
+      if (response.ok && data.code === 1000) {
+        setUnreadNotificationCount(data.result || 0);
+      }
+    } catch (error) {
+      console.error("Error fetching notification count:", error);
+    }
+  };
+
   useEffect(() => {
     syncAuthState();
+  }, []);
 
+  useEffect(() => {
+    if (isLoggedIn && user?.id) {
+      fetchUnreadNotificationCount();
+      // Refresh notification count every 30 seconds
+      const interval = setInterval(fetchUnreadNotificationCount, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [isLoggedIn, user?.id]);
+
+  useEffect(() => {
     const handleStorage = (event: StorageEvent) => {
       if (event.key === "accessToken" || event.key === "user") {
         syncAuthState();
@@ -154,6 +202,18 @@ export default function Navbar() {
                         : null
                     }
                   />
+                  <button
+                    onClick={() => setShowMessenger(true)}
+                    className="relative p-2 text-gray-200 hover:text-white hover:bg-white hover:bg-opacity-10 rounded-lg transition-all"
+                    title="Tin nhắn"
+                  >
+                    <MessageSquare className="w-5 h-5" />
+                    {unreadNotificationCount > 0 && (
+                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
+                        {unreadNotificationCount > 9 ? "9+" : unreadNotificationCount}
+                      </span>
+                    )}
+                  </button>
                   <div className="relative">
                     <button
                       onClick={() => setProfileOpen(!profileOpen)}
@@ -341,6 +401,20 @@ export default function Navbar() {
           </div>
         </div>
       </div>
+
+      {/* Messenger Modal */}
+      {showMessenger && user?.id && (
+        <Messenger
+          isOpen={showMessenger}
+          onClose={() => setShowMessenger(false)}
+          currentUserId={user.id}
+          authToken={
+            typeof window !== "undefined"
+              ? window.localStorage.getItem("accessToken") || ""
+              : ""
+          }
+        />
+      )}
     </>
   );
 }
