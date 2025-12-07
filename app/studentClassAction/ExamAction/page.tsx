@@ -24,14 +24,16 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
+
 const EXAMS_API = (classId: string | number) =>
-  `http://localhost:8080/education/api/exams/class/${classId}/student`;
+  `${BASE_HTTP}/api/exams/class/${classId}/student`;
 
 const EXAM_RESULTS_API = (examId: string | number) =>
-  `http://localhost:8080/education/api/exams/${examId}/results`;
+  `${BASE_HTTP}/api/exams/${examId}/results`;
 
 const START_EXAM_API = (examId: string | number) =>
-  `http://localhost:8080/education/api/exams/${examId}/start`;
+  `${BASE_HTTP}/api/exams/${examId}/start`;
 
 interface Exam {
   id: number;

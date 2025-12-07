@@ -24,10 +24,12 @@ import TeacherStatCard from "@/components/TeacherStatCard";
 import TeacherScheduleItem from "@/components/TeacherScheduleItem";
 import TeacherTodoItem from "@/components/TeacherTodoItem";
 
-const CLASSES_API = "http://localhost:8080/education/api/classes/teacher";
-const CREATE_CLASS_API = "http://localhost:8080/education/api/classes";
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
+
+const CLASSES_API = `${BASE_HTTP}/api/classes/teacher`;
+const CREATE_CLASS_API = `${BASE_HTTP}/api/classes`;
 const NOTICES_API = (userId) =>
-  `http://localhost:8080/education/api/notices/user/${userId}`;
+  `${BASE_HTTP}/api/notices/user/${userId}`;
 
 const scheduleItems = [
   {

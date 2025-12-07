@@ -18,10 +18,13 @@ import {
 } from "lucide-react";
 
 // API & WebSocket Config
-const CONVERSATIONS_API = "http://localhost:8080/education/chat/conversation";
-const MESSAGES_API = "http://localhost:8080/education/chat/messages";
-const SEND_MESSAGE_API = "http://localhost:8080/education/chat/messages";
-const WS_URL = "ws://localhost:8080/education/ws";
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
+const BASE_WS = process.env.NEXT_PUBLIC_WS;
+
+const CONVERSATIONS_API = `${BASE_HTTP}/chat/conversation`;
+const MESSAGES_API = `${BASE_HTTP}/chat/messages`;
+const SEND_MESSAGE_API = `${BASE_HTTP}/chat/messages`;
+const WS_URL = `${BASE_WS}/ws`;
 
 // ... Giữ nguyên các Interface ...
 interface User {

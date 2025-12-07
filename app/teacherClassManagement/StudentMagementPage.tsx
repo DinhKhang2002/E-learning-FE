@@ -27,16 +27,18 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import MessagingModal from "@/components/MessagingModal";
 
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
+
 const CLASS_DETAIL_API = (classId: string | number) =>
-  `http://localhost:8080/education/api/classes/${classId}`;
+  `${BASE_HTTP}/api/classes/${classId}`;
 
 const STUDENTS_API = (classId: string | number) =>
-  `http://localhost:8080/education/api/class-students/students/${classId}`;
+  `${BASE_HTTP}/api/class-students/students/${classId}`;
 
-const ADD_STUDENT_API = "http://localhost:8080/education/api/class-students";
+const ADD_STUDENT_API = `${BASE_HTTP}/api/class-students`;
 
 const DELETE_STUDENT_API = (classId: string | number, studentId: string | number) =>
-  `http://localhost:8080/education/api/class-students?classId=${classId}&studentId=${studentId}`;
+  `${BASE_HTTP}/api/class-students?classId=${classId}&studentId=${studentId}`;
 
 interface ClassData {
   id: number;
@@ -482,7 +484,7 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
                       MÃ HỌC SINH
                     </th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">
-                      NGÀY THAM GIA
+                      NGÀY SINH
                     </th>
                     <th className="text-left py-3 px-4 text-sm font-semibold text-slate-700">
                       HÀNH ĐỘNG
@@ -614,7 +616,7 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
 
       {/* Add Student Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-gray-500/60 flex items-center justify-center z-50 p-4">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}

@@ -7,7 +7,9 @@ import { Mail, Lock, Loader2, ShieldCheck } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
-const LOGIN_API = "http://localhost:8080/education/api/auth/login";
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
+
+const LOGIN_API = `${BASE_HTTP}/api/auth/login`;
 const AUTH_EVENT = "auth-changed";
 
 interface LoginResult {

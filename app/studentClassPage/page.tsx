@@ -19,11 +19,13 @@ import Footer from "@/components/Footer";
 import DashboardClass from "@/components/DashboardClass";
 import StudentClassManagement from "@/components/StudentClassManagement"; // Import Sidebar mới
 
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
+
 const CLASS_DETAIL_API = (classId: string | number) =>
-  `http://localhost:8080/education/api/classes/${classId}`;
+  `${BASE_HTTP}/api/classes/${classId}`;
 const CHECK_ROOMS_API = (classId: string | number) =>
-  `http://localhost:8080/education/api/rooms/class/${classId}/check`;
-const JOIN_ROOM_API = `http://localhost:8080/education/api/rooms/join`;
+  `${BASE_HTTP}/api/rooms/class/${classId}/check`;
+const JOIN_ROOM_API = `${BASE_HTTP}/api/rooms/join`;
 
 interface ClassData {
   id: number;

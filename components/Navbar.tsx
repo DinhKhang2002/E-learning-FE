@@ -37,7 +37,6 @@ export default function Navbar() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [user, setUser] = useState<StoredUser | null>(null);
   const [showMessenger, setShowMessenger] = useState(false);
-  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
   const router = useRouter();
 
   const syncAuthState = () => {
@@ -59,52 +58,9 @@ export default function Navbar() {
     }
   };
 
-  // Fetch unread notification count
-  const fetchUnreadNotificationCount = async () => {
-    if (typeof window === "undefined") return;
-    const token = window.localStorage.getItem("accessToken");
-    const userRaw = window.localStorage.getItem("user");
-    
-    if (!token || !userRaw) {
-      setUnreadNotificationCount(0);
-      return;
-    }
-
-    try {
-      const user = JSON.parse(userRaw);
-      if (!user?.id) return;
-
-      const response = await fetch(
-        `http://localhost:8080/education/api/notices/${user.id}/count`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      const data = await response.json();
-      if (response.ok && data.code === 1000) {
-        setUnreadNotificationCount(data.result || 0);
-      }
-    } catch (error) {
-      console.error("Error fetching notification count:", error);
-    }
-  };
-
   useEffect(() => {
     syncAuthState();
   }, []);
-
-  useEffect(() => {
-    if (isLoggedIn && user?.id) {
-      fetchUnreadNotificationCount();
-      // Refresh notification count every 30 seconds
-      const interval = setInterval(fetchUnreadNotificationCount, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [isLoggedIn, user?.id]);
 
   useEffect(() => {
     const handleStorage = (event: StorageEvent) => {
@@ -204,15 +160,12 @@ export default function Navbar() {
                   />
                   <button
                     onClick={() => setShowMessenger(true)}
-                    className="relative p-2 text-gray-200 hover:text-white hover:bg-white hover:bg-opacity-10 rounded-lg transition-all"
+                    className="relative w-10 h-10 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 p-0.5 hover:shadow-lg hover:shadow-pink-500/50 transition-all duration-300 group"
                     title="Tin nhắn"
                   >
-                    <MessageSquare className="w-5 h-5" />
-                    {unreadNotificationCount > 0 && (
-                      <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center">
-                        {unreadNotificationCount > 9 ? "9+" : unreadNotificationCount}
-                      </span>
-                    )}
+                    <div className="w-full h-full rounded-full bg-gray-900 flex items-center justify-center">
+                      <MessageSquare className="w-5 h-5 text-pink-400 group-hover:text-pink-300 transition-colors" />
+                    </div>
                   </button>
                   <div className="relative">
                     <button

@@ -17,20 +17,22 @@ import {
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
+
 const GET_SUBMISSION_API = (examId: string | number) =>
-  `http://localhost:8080/education/api/exams/${examId}/get-submission`;
+  `${BASE_HTTP}/api/exams/${examId}/get-submission`;
 
 const EXAM_QUESTIONS_API = (examId: string | number, page: number, size: number) =>
-  `http://localhost:8080/education/api/exams/${examId}/questions?page=${page}&size=${size}`;
+  `${BASE_HTTP}/api/exams/${examId}/questions?page=${page}&size=${size}`;
 
 const SUBMIT_ANSWER_API = (submissionId: string | number) =>
-  `http://localhost:8080/education/api/exam-submissions/${submissionId}/answers`;
+  `${BASE_HTTP}/api/exam-submissions/${submissionId}/answers`;
 
 const SUBMIT_EXAM_API = (submissionId: string | number) =>
-  `http://localhost:8080/education/api/exams/${submissionId}/submit`;
+  `${BASE_HTTP}/api/exams/${submissionId}/submit`;
 
 const GET_EXAM_RESULT_API = (submissionId: string | number) =>
-  `http://localhost:8080/education/api/exams/submission/${submissionId}/result`;
+  `${BASE_HTTP}/api/exams/submission/${submissionId}/result`;
 
 interface Question {
   questionId: number;

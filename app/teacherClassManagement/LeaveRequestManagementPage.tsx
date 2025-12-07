@@ -24,17 +24,19 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
+
 const CLASS_DETAIL_API = (classId: string | number) =>
-  `http://localhost:8080/education/api/classes/${classId}`;
+  `${BASE_HTTP}/api/classes/${classId}`;
 
 const LEAVE_REQUESTS_API = (classId: string | number) =>
-  `http://localhost:8080/education/api/leave-request/class/${classId}`;
+  `${BASE_HTTP}/api/leave-request/class/${classId}`;
 
 const APPROVE_LEAVE_REQUEST_API = (requestId: number) =>
-  `http://localhost:8080/education/api/leave-request/${requestId}/approve`;
+  `${BASE_HTTP}/api/leave-request/${requestId}/approve`;
 
 const REJECT_LEAVE_REQUEST_API = (requestId: number) =>
-  `http://localhost:8080/education/api/leave-request/${requestId}/reject`;
+  `${BASE_HTTP}/api/leave-request/${requestId}/reject`;
 
 interface ClassData {
   id: number;

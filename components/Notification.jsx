@@ -13,10 +13,12 @@ import {
 } from "lucide-react";
 import Portal from "./Portal";
 
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
+
 const NOTICES_API = (userId) =>
-  `http://localhost:8080/education/api/notices/user/${userId}`;
+  `${BASE_HTTP}/api/notices/user/${userId}`;
 const MARK_READ_API = (noticeId) =>
-  `http://localhost:8080/education/api/notices/${noticeId}/read`;
+  `${BASE_HTTP}/api/notices/${noticeId}/read`;
 
 const typeConfig = {
   ASSIGNMENT_NEW: {

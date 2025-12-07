@@ -7,8 +7,10 @@ import { CheckCircle2, Home, LogIn, Sparkles, Mail, Loader2, XCircle, AlertCircl
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
+
 const CONFIRM_EMAIL_API = (token: string) =>
-  `http://localhost:8080/education/api/confirm-email?token=${token}`;
+  `${BASE_HTTP}/api/confirm-email?token=${token}`;
 
 export default function ConfirmEmailPage() {
   const router = useRouter();

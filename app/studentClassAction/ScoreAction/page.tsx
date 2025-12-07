@@ -21,11 +21,13 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
+
 const SCORES_API = (classId: string | number, studentId: string | number) =>
-  `http://localhost:8080/education/api/scores/exam-student?classId=${classId}&studentId=${studentId}`;
+  `${BASE_HTTP}/api/scores/exam-student?classId=${classId}&studentId=${studentId}`;
 
 const EXAMS_API = (classId: string | number) =>
-  `http://localhost:8080/education/api/exams/class/${classId}/student`;
+  `${BASE_HTTP}/api/exams/class/${classId}/student`;
 
 interface Score {
   studentId: number;

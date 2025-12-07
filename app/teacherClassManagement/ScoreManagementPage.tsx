@@ -18,17 +18,19 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
+
 const CLASS_DETAIL_API = (classId: string | number) =>
-  `http://localhost:8080/education/api/classes/${classId}`;
+  `${BASE_HTTP}/api/classes/${classId}`;
 
 const SCORES_SUMMARY_API = (classId: string | number) =>
-  `http://localhost:8080/education/api/scores/summary?classId=${classId}`;
+  `${BASE_HTTP}/api/scores/summary?classId=${classId}`;
 
 const SCORES_BY_EXAM_API = (classId: string | number, examId: number) =>
-  `http://localhost:8080/education/api/scores/classes?classId=${classId}&examId=${examId}`;
+  `${BASE_HTTP}/api/scores/classes?classId=${classId}&examId=${examId}`;
 
 const EXPORT_SCORES_API = (classId: string | number) =>
-  `http://localhost:8080/education/api/scores/classes/${classId}/scores/export`;
+  `${BASE_HTTP}/api/scores/classes/${classId}/scores/export`;
 
 interface ClassData {
   id: number;

@@ -24,17 +24,19 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
+
 const CLASS_DETAIL_API = (classId: string | number) =>
-  `http://localhost:8080/education/api/classes/${classId}`;
+  `${BASE_HTTP}/api/classes/${classId}`;
 
 const DOCUMENTS_API = (classId: string | number) =>
-  `http://localhost:8080/education/api/documents/class/${classId}`;
+  `${BASE_HTTP}/api/documents/class/${classId}`;
 
 const UPDATE_DOCUMENT_API = (documentId: number) =>
-  `http://localhost:8080/education/api/documents/${documentId}`;
+  `${BASE_HTTP}/api/documents/${documentId}`;
 
 const DELETE_DOCUMENT_API = (documentId: number) =>
-  `http://localhost:8080/education/api/documents/${documentId}`;
+  `${BASE_HTTP}/api/documents/${documentId}`;
 
 interface ClassData {
   id: number;

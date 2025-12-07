@@ -25,16 +25,18 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
+
 const SUBMISSIONS_API = (assignmentId: string | number) =>
-  `http://localhost:8080/education/api/submissions/assignment/${assignmentId}`;
+  `${BASE_HTTP}/api/submissions/assignment/${assignmentId}`;
 
 const SUBMISSION_DETAIL_API = (submissionId: string | number) =>
-  `http://localhost:8080/education/api/submissions/${submissionId}`;
+  `${BASE_HTTP}/api/submissions/${submissionId}`;
 
 const GRADE_SUBMISSION_API = (submissionId: string | number) =>
-  `http://localhost:8080/education/api/submissions/${submissionId}/grade`;
+  `${BASE_HTTP}/api/submissions/${submissionId}/grade`;
 
-const FILE_DOWNLOAD_BASE = "http://localhost:8080";
+const FILE_DOWNLOAD_BASE = `${BASE_HTTP}/api/files`;
 
 interface SubmissionFile {
   id: number;

@@ -23,28 +23,30 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
+
 const CLASS_DETAIL_API = (classId: string | number) =>
-  `http://localhost:8080/education/api/classes/${classId}`;
+  `${BASE_HTTP}/api/classes/${classId}`;
 
 const QUESTIONS_API = (classId: string | number, page: number, size: number) =>
-  `http://localhost:8080/education/api/questions?classId=${classId}&page=${page}&size=${size}`;
+  `${BASE_HTTP}/api/questions?classId=${classId}&page=${page}&size=${size}`;
 
 const QUESTION_DETAIL_API = (questionId: number) =>
-  `http://localhost:8080/education/api/questions/${questionId}`;
+  `${BASE_HTTP}/api/questions/${questionId}`;
 
-const CREATE_QUESTION_API = "http://localhost:8080/education/api/questions";
+const CREATE_QUESTION_API = `${BASE_HTTP}/api/questions`;
 
 const UPDATE_QUESTION_API = (questionId: number) =>
-  `http://localhost:8080/education/api/questions/${questionId}`;
+  `${BASE_HTTP}/api/questions/${questionId}`;
 
 const DELETE_QUESTION_API = (questionId: number) =>
-  `http://localhost:8080/education/api/questions/${questionId}`;
+  `${BASE_HTTP}/api/questions/${questionId}`;
 
 const CREATE_EXAM_FROM_QUESTIONS_API =
-  "http://localhost:8080/education/api/exams/choose";
+  `${BASE_HTTP}/exams/choose`;
 
 const CREATE_RANDOM_EXAM_API =
-  "http://localhost:8080/education/api/exams/random";
+  `${BASE_HTTP}/exams/random`;
 
 interface ClassData {
   id: number;

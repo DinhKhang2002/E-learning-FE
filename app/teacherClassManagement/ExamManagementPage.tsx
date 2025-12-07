@@ -24,26 +24,28 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
+
 const CLASS_DETAIL_API = (classId: string | number) =>
-  `http://localhost:8080/education/api/classes/${classId}`;
+  `${BASE_HTTP}/api/classes/${classId}`;
 
 const EXAMS_API = (classId: string | number) =>
-  `http://localhost:8080/education/api/exams/${classId}/class`;
+  `${BASE_HTTP}/api/exams/${classId}/class`;
 
 const EXAM_DETAIL_API = (examId: number) =>
-  `http://localhost:8080/education/api/exams/${examId}`;
+  `${BASE_HTTP}/api/exams/${examId}`;
 
 const UPDATE_EXAM_API = (examId: number) =>
-  `http://localhost:8080/education/api/exams/${examId}`;
+  `${BASE_HTTP}/api/exams/${examId}`;
 
 const DELETE_EXAM_API = (examId: number) =>
-  `http://localhost:8080/education/api/exams/${examId}`;
+  `${BASE_HTTP}/api/exams/${examId}`;
 
 const START_EXAM_API = (examId: number) =>
-  `http://localhost:8080/education/api/exams/${examId}/start`;
+  `${BASE_HTTP}/api/exams/${examId}/start`;
 
 const EXAM_QUESTIONS_API = (examId: number, page: number, size: number) =>
-  `http://localhost:8080/education/api/exams/${examId}/questions?page=${page}&size=${size}`;
+  `${BASE_HTTP}/api/exams/${examId}/questions?page=${page}&size=${size}`;
 
 interface ClassData {
   id: number;

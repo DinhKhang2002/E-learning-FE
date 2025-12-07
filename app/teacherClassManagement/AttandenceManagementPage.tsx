@@ -18,19 +18,21 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
+
 const CLASS_DETAIL_API = (classId: string | number) =>
-  `http://localhost:8080/education/api/classes/${classId}`;
+  `${BASE_HTTP}/api/classes/${classId}`;
 
 const ATTENDANCE_OVERVIEW_API = (classId: string | number) =>
-  `http://localhost:8080/education/api/class-students/students/attendance/${classId}`;
+  `${BASE_HTTP}/api/class-students/students/attendance/${classId}`;
 
 const STUDENTS_API = (classId: string | number) =>
-  `http://localhost:8080/education/api/class-students/students/${classId}`;
+  `${BASE_HTTP}/api/class-students/students/${classId}`;
 
-const CREATE_ATTENDANCE_API = "http://localhost:8080/education/api/attendance";
+const CREATE_ATTENDANCE_API = `${BASE_HTTP}/api/attendance`;
 
 const ATTENDANCE_HISTORY_API = (classId: string | number, date: string) =>
-  `http://localhost:8080/education/api/attendance/class?classId=${classId}&attendanceDate=${date}`;
+  `${BASE_HTTP}/api/attendance/class?classId=${classId}&attendanceDate=${date}`;
 
 interface ClassData {
   id: number;

@@ -20,19 +20,21 @@ import {
 } from "lucide-react";
 
 // ... (Giữ nguyên phần khai báo API và Interface như cũ)
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
+
 const CLASS_POSTS_API = (classId: string | number) =>
-  `http://localhost:8080/education/api/posts/class?classId=${classId}`;
-const CREATE_POST_API = "http://localhost:8080/education/api/posts/create";
+  `${BASE_HTTP}/api/posts/class?classId=${classId}`;
+const CREATE_POST_API = `${BASE_HTTP}/api/posts/create`;
 const UPDATE_POST_API = (postId: string | number) =>
-  `http://localhost:8080/education/api/posts/update/${postId}`;
+  `${BASE_HTTP}/api/posts/update/${postId}`;
 const DELETE_POST_API = (postId: string | number) =>
-  `http://localhost:8080/education/api/posts/${postId}`;
-const POST_EMOTION_API = "http://localhost:8080/education/api/posts/emotion";
+  `${BASE_HTTP}/api/posts/${postId}`;
+const POST_EMOTION_API = `${BASE_HTTP}/api/posts/emotion`;
 const COMMENTS_BY_POST_API = (postId: string | number) =>
-  `http://localhost:8080/education/api/comments/post/${postId}`;
-const CREATE_COMMENT_API = "http://localhost:8080/education/api/comments/create";
+  `${BASE_HTTP}/api/comments/post/${postId}`;
+const CREATE_COMMENT_API = `${BASE_HTTP}/api/comments/create`;
 const DELETE_COMMENT_API = (commentId: string | number) =>
-  `http://localhost:8080/education/api/comments/${commentId}`;
+  `${BASE_HTTP}/api/comments/${commentId}`;
 
 const DEFAULT_ICON =
   "https://cdn-icons-png.flaticon.com/256/11265/11265088.png";

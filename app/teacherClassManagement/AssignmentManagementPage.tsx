@@ -25,24 +25,26 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
+
 const CLASS_DETAIL_API = (classId: string | number) =>
-  `http://localhost:8080/education/api/classes/${classId}`;
+  `${BASE_HTTP}/api/classes/${classId}`;
 
 const ASSIGNMENTS_API = (classId: string | number) =>
-  `http://localhost:8080/education/api/assignments/${classId}/class`;
+  `${BASE_HTTP}/api/assignments/${classId}/class`;
 
 const ASSIGNMENT_DETAIL_API = (assignmentId: number) =>
-  `http://localhost:8080/education/api/assignments/${assignmentId}`;
+  `${BASE_HTTP}/api/assignments/${assignmentId}`;
 
-const CREATE_ASSIGNMENT_API = "http://localhost:8080/education/api/assignments";
+const CREATE_ASSIGNMENT_API = `${BASE_HTTP}/api/assignments`;
 
 const UPDATE_ASSIGNMENT_API = (assignmentId: number) =>
-  `http://localhost:8080/education/api/assignments/${assignmentId}`;
+  `${BASE_HTTP}/api/assignments/${assignmentId}`;
 
 const DELETE_ASSIGNMENT_API = (assignmentId: number) =>
-  `http://localhost:8080/education/api/assignments/${assignmentId}`;
+  `${BASE_HTTP}/api/assignments/${assignmentId}`;
 
-const FILE_DOWNLOAD_BASE = "http://localhost:8080";
+const FILE_DOWNLOAD_BASE = `${BASE_HTTP}/api/files`;
 
 interface ClassData {
   id: number;

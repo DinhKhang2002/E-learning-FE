@@ -16,11 +16,14 @@ import {
 } from "lucide-react";
 
 // Giữ nguyên các constant API của bạn
-const CONVERSATION_API = "http://localhost:8080/education/chat/conversation";
-const SEND_MESSAGE_API = "http://localhost:8080/education/chat/messages";
-const MESSAGES_API = "http://localhost:8080/education/chat/messages";
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
+const BASE_WS = process.env.NEXT_PUBLIC_WS;
+
+const CONVERSATION_API = `${BASE_HTTP}/chat/conversation`;
+const SEND_MESSAGE_API = `${BASE_HTTP}/chat/messages`;
+const MESSAGES_API = `${BASE_HTTP}/chat/messages`;
 // Lưu ý: WS_URL phải là ws:// nếu không dùng SSL, wss:// nếu có SSL
-const WS_URL = "ws://localhost:8080/education/ws"; 
+const WS_URL = `${BASE_WS}/ws`; 
 
 // ... Giữ nguyên các Interface User, FileAttachment, Message, Conversation ...
 interface User {

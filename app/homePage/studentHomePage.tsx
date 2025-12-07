@@ -22,9 +22,11 @@ import SuggestClassCard from "@/components/SuggestClassCard";
 import AnnouncementCard from "@/components/AnnouncementCard";
 import ScheduleCard from "@/components/ScheduleCard";
 
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
+
 const STUDENT_CLASSES_API = (studentId: string | number) =>
-  `http://localhost:8080/education/api/class-students/classes/${studentId}`;
-const JOIN_CLASS_API = `http://localhost:8080/education/api/class-students/class-code`;
+  `${BASE_HTTP}/api/class-students/classes/${studentId}`;
+const JOIN_CLASS_API = `${BASE_HTTP}/api/class-students/class-code`;
 
 interface ClassData {
   id: number;

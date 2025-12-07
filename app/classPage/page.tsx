@@ -11,14 +11,16 @@ import ClassDetailInfo from "@/components/ClassDetailInfo";
 import ClassManagement from "@/components/ClassManagement";
 import DashboardClass from "@/components/DashboardClass";
 
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
+
 const CLASS_DETAIL_API = (classId: string | number) =>
-  `http://localhost:8080/education/api/classes/${classId}`;
-const CREATE_ROOM_API = `http://localhost:8080/education/api/rooms/create`;
+  `${BASE_HTTP}/api/classes/${classId}`;
+const CREATE_ROOM_API = `${BASE_HTTP}/api/rooms/create`;
 const SAVE_ROOM_PATH_API = (roomId: string | number, path: string) =>
-  `http://localhost:8080/education/api/rooms/${roomId}/save-path?path=${encodeURIComponent(path)}`;
+  `${BASE_HTTP}/api/rooms/${roomId}/save-path?path=${encodeURIComponent(path)}`;
 const CHECK_ROOMS_API = (classId: string | number) =>
-  `http://localhost:8080/education/api/rooms/class/${classId}/check`;
-const JOIN_ROOM_API = `http://localhost:8080/education/api/rooms/join`;
+  `${BASE_HTTP}/api/rooms/class/${classId}/check`;
+const JOIN_ROOM_API = `${BASE_HTTP}/api/rooms/join`;
 
 interface ClassData {
   id: number;

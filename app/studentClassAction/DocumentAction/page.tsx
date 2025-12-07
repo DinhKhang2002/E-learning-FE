@@ -23,8 +23,10 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
+
 const DOCUMENTS_API = (classId: string | number) =>
-  `http://localhost:8080/education/api/documents/class/${classId}`;
+  `${BASE_HTTP}/api/documents/class/${classId}`;
 
 interface Document {
   id: number;

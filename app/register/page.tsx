@@ -17,7 +17,9 @@ import {
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
-const REGISTER_API = "http://localhost:8080/education/api/auth/register";
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
+
+const REGISTER_API = `${BASE_HTTP}/api/auth/register`;
 
 const GENDER_OPTIONS = [
   { value: "MALE", label: "Nam" },

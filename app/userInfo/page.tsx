@@ -30,7 +30,9 @@ interface UserInfo {
   dob: string;
 }
 
-const USER_INFO_API = "http://localhost:8080/education/api/users/getUserInfo";
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
+
+const USER_INFO_API = `${BASE_HTTP}/api/users/getUserInfo`;
 
 function formatDate(dateString: string) {
   if (!dateString) return "—";

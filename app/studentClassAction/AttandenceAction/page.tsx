@@ -24,13 +24,15 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
-const ATTENDANCE_API = (studentId: string | number, classId: string | number) =>
-  `http://localhost:8080/education/api/attendance/student?studentId=${studentId}&classId=${classId}`;
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
 
-const LEAVE_REQUEST_API = `http://localhost:8080/education/api/leave-request`;
+const ATTENDANCE_API = (studentId: string | number, classId: string | number) =>
+  `${BASE_HTTP}/api/attendance/student?studentId=${studentId}&classId=${classId}`;
+
+const LEAVE_REQUEST_API = `${BASE_HTTP}/leave-request`;
 
 const LEAVE_REQUESTS_API = (studentId: string | number, classId: string | number) =>
-  `http://localhost:8080/education/api/leave-request/student?studentId=${studentId}&classId=${classId}`;
+  `${BASE_HTTP}/api/leave-request/student?studentId=${studentId}&classId=${classId}`;
 
 interface AttendanceRecord {
   id: number;
