@@ -20,6 +20,7 @@ import {
   Upload,
   File,
   Award,
+  Eye,
 } from "lucide-react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
@@ -44,7 +45,8 @@ const UPDATE_ASSIGNMENT_API = (assignmentId: number) =>
 const DELETE_ASSIGNMENT_API = (assignmentId: number) =>
   `${BASE_HTTP}/api/assignments/${assignmentId}`;
 
-const FILE_DOWNLOAD_BASE = `${BASE_HTTP}/api/files`;
+const FILE_VIEW_API = (fileUrl: string) =>
+  `${BASE_HTTP}/api/files/get?fileUrl=${encodeURIComponent(fileUrl)}`;
 
 interface ClassData {
   id: number;
@@ -105,6 +107,15 @@ export default function AssignmentManagementPage({
     useState<Assignment | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [showFileModal, setShowFileModal] = useState(false);
+  const [viewingFile, setViewingFile] = useState<{
+    url: string;
+    fileName: string;
+    fileType: string;
+    blobUrl: string | null;
+  } | null>(null);
+  const [fileLoading, setFileLoading] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   // Form states
   const [formTitle, setFormTitle] = useState("");
@@ -444,8 +455,104 @@ export default function AssignmentManagementPage({
     }
   };
 
-  const handleDownloadFile = (fileUrl: string, fileName: string) => {
-    window.open(fileUrl, "_blank");
+  const handleViewFile = async (fileUrl: string, fileName: string, fileType: string) => {
+    if (!authToken) {
+      alert("Vui lòng đăng nhập lại");
+      return;
+    }
+
+    setFileLoading(true);
+    setFileError(null);
+    setViewingFile({ url: fileUrl, fileName, fileType, blobUrl: null });
+    setShowFileModal(true);
+
+    try {
+      const apiUrl = FILE_VIEW_API(fileUrl);
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Không thể tải file: ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      setViewingFile((prev) => {
+        if (prev) {
+          return { ...prev, blobUrl };
+        }
+        return prev;
+      });
+      setFileLoading(false);
+    } catch (error) {
+      console.error("Failed to load file:", error);
+      setFileError(
+        error instanceof Error
+          ? error.message
+          : "Không thể tải file. Vui lòng thử lại."
+      );
+      setFileLoading(false);
+    }
+  };
+
+  const handleDownloadFile = async (fileUrl: string, fileName: string) => {
+    if (!authToken) {
+      alert("Vui lòng đăng nhập lại");
+      return;
+    }
+
+    try {
+      const apiUrl = FILE_VIEW_API(fileUrl);
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Không thể tải file: ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error("Failed to download file:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Không thể tải file. Vui lòng thử lại."
+      );
+    }
+  };
+
+  const canPreviewInBrowser = (fileType: string) => {
+    const previewableTypes = [
+      "application/pdf",
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+      "text/plain",
+      "text/html",
+      "text/css",
+      "text/javascript",
+      "application/json",
+    ];
+    return previewableTypes.some((type) => fileType.toLowerCase().includes(type.split("/")[1]));
   };
 
   if (loading) {
@@ -931,15 +1038,16 @@ export default function AssignmentManagementPage({
                           </div>
                           <button
                             onClick={() =>
-                              handleDownloadFile(
+                              handleViewFile(
                                 selectedAssignment.fileRecord!.fileUrl,
-                                selectedAssignment.fileRecord!.fileName
+                                selectedAssignment.fileRecord!.fileName,
+                                selectedAssignment.fileRecord!.fileType
                               )
                             }
                             className="p-2 text-slate-600 hover:text-pink-600 hover:bg-pink-50 rounded-lg transition-colors"
-                            title="Tải xuống"
+                            title="Xem file"
                           >
-                            <Download className="w-5 h-5" />
+                            <Eye className="w-5 h-5" />
                           </button>
                         </div>
                       </div>
@@ -949,6 +1057,157 @@ export default function AssignmentManagementPage({
               </div>
             </motion.div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* File Viewer Modal */}
+      <AnimatePresence>
+        {showFileModal && viewingFile && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000]"
+              onClick={() => {
+                if (viewingFile?.blobUrl) {
+                  URL.revokeObjectURL(viewingFile.blobUrl);
+                }
+                setShowFileModal(false);
+                setViewingFile(null);
+                setFileLoading(false);
+                setFileError(null);
+              }}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed inset-0 z-[10001] flex items-center justify-center p-4 overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="relative w-full max-w-6xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden max-h-[95vh] flex flex-col">
+                {/* Header */}
+                <div className="flex items-center justify-between p-6 border-b border-slate-200 bg-gradient-to-r from-pink-50 to-rose-50">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <File className="w-6 h-6 text-pink-600 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <h2 className="text-xl font-bold text-slate-900 truncate">
+                        {viewingFile.fileName}
+                      </h2>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {viewingFile.fileType}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleDownloadFile(viewingFile.url, viewingFile.fileName)}
+                      className="p-2 text-slate-600 hover:text-pink-600 hover:bg-pink-50 rounded-lg transition-colors"
+                      title="Tải xuống"
+                    >
+                      <Download className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (viewingFile?.blobUrl) {
+                          URL.revokeObjectURL(viewingFile.blobUrl);
+                        }
+                        setShowFileModal(false);
+                        setViewingFile(null);
+                        setFileLoading(false);
+                        setFileError(null);
+                      }}
+                      className="p-2 text-slate-600 hover:text-slate-900 hover:bg-white rounded-lg transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* File Content */}
+                <div className="flex-1 overflow-auto bg-slate-50 p-4">
+                  {fileLoading ? (
+                    <div className="flex items-center justify-center h-full min-h-[400px]">
+                      <div className="text-center">
+                        <Loader2 className="w-12 h-12 animate-spin text-pink-600 mx-auto mb-4" />
+                        <p className="text-slate-600 font-medium">Đang tải file...</p>
+                      </div>
+                    </div>
+                  ) : fileError ? (
+                    <div className="flex flex-col items-center justify-center h-full min-h-[400px] p-8">
+                      <AlertCircle className="w-16 h-16 text-red-400 mb-4" />
+                      <p className="text-lg font-semibold text-slate-700 mb-2">
+                        Lỗi khi tải file
+                      </p>
+                      <p className="text-sm text-slate-500 mb-6">{fileError}</p>
+                      <button
+                        onClick={() => {
+                          if (viewingFile) {
+                            handleViewFile(viewingFile.url, viewingFile.fileName, viewingFile.fileType);
+                          }
+                        }}
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-xl font-semibold hover:from-pink-700 hover:to-rose-700 transition-all shadow-lg hover:shadow-xl"
+                      >
+                        <Loader2 className="w-5 h-5" />
+                        Thử lại
+                      </button>
+                    </div>
+                  ) : viewingFile?.blobUrl ? (
+                    <div className="w-full h-full">
+                      {viewingFile.fileType.toLowerCase().includes("pdf") ? (
+                        <iframe
+                          src={viewingFile.blobUrl}
+                          className="w-full h-full min-h-[600px] rounded-lg border border-slate-200"
+                          title={viewingFile.fileName}
+                        />
+                      ) : viewingFile.fileType.toLowerCase().startsWith("image/") ? (
+                        <div className="flex items-center justify-center">
+                          <img
+                            src={viewingFile.blobUrl}
+                            alt={viewingFile.fileName}
+                            className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-lg"
+                            onError={() => {
+                              setFileError("Không thể hiển thị hình ảnh");
+                            }}
+                          />
+                        </div>
+                      ) : viewingFile.fileType.toLowerCase().includes("text/") ||
+                        viewingFile.fileType.toLowerCase().includes("application/json") ||
+                        viewingFile.fileType.toLowerCase().includes("application/javascript") ||
+                        viewingFile.fileType.toLowerCase().includes("text/html") ||
+                        viewingFile.fileType.toLowerCase().includes("text/css") ? (
+                        <iframe
+                          src={viewingFile.blobUrl}
+                          className="w-full h-full min-h-[600px] rounded-lg border border-slate-200 bg-white"
+                          title={viewingFile.fileName}
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center h-full min-h-[400px] p-8">
+                          <File className="w-24 h-24 text-slate-300 mb-4" />
+                          <p className="text-lg font-semibold text-slate-700 mb-2">
+                            Không thể xem trước file này
+                          </p>
+                          <p className="text-sm text-slate-500 mb-6">
+                            Loại file: {viewingFile.fileType}
+                          </p>
+                          <button
+                            onClick={() =>
+                              handleDownloadFile(viewingFile.url, viewingFile.fileName)
+                            }
+                            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-pink-600 to-rose-600 text-white rounded-xl font-semibold hover:from-pink-700 hover:to-rose-700 transition-all shadow-lg hover:shadow-xl"
+                          >
+                            <Download className="w-5 h-5" />
+                            Tải xuống để xem
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </main>
