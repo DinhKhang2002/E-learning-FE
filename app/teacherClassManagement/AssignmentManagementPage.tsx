@@ -57,12 +57,14 @@ interface ClassData {
   createdAt: string;
 }
 
-interface AssignmentFile {
+interface FileRecord {
+  id: number;
   fileName: string;
+  fileUrl: string;
   fileType: string;
-  filePath: string;
-  downloadUrl: string;
   fileSize: number;
+  folder: string;
+  uploadedBy: string;
   uploadedAt: string;
 }
 
@@ -71,7 +73,7 @@ interface Assignment {
   title: string;
   content: string;
   classId: number;
-  files: AssignmentFile[];
+  fileRecord: FileRecord | null;
   status: string;
   startAt: string;
   endAt: string;
@@ -442,8 +444,8 @@ export default function AssignmentManagementPage({
     }
   };
 
-  const handleDownloadFile = (downloadUrl: string, fileName: string) => {
-    window.open(`${FILE_DOWNLOAD_BASE}${downloadUrl}`, "_blank");
+  const handleDownloadFile = (fileUrl: string, fileName: string) => {
+    window.open(fileUrl, "_blank");
   };
 
   if (loading) {
@@ -587,7 +589,7 @@ export default function AssignmentManagementPage({
                         <div className="flex items-center gap-2 mb-4 pb-4 border-b border-slate-100">
                           <FileText className="w-4 h-4 text-slate-400" />
                           <span className="text-xs text-slate-500">
-                            {assignment.files.length} tệp đính kèm
+                            {assignment.fileRecord ? "1 tệp đính kèm" : "Không có tệp đính kèm"}
                           </span>
                         </div>
 
@@ -906,39 +908,40 @@ export default function AssignmentManagementPage({
                     </div>
                   </div>
 
-                  {selectedAssignment.files.length > 0 && (
+                  {selectedAssignment.fileRecord && (
                     <div>
                       <h3 className="text-sm font-bold uppercase tracking-wide text-slate-500 mb-3">
                         Tệp đính kèm
                       </h3>
                       <div className="space-y-2">
-                        {selectedAssignment.files.map((file, index) => (
-                          <div
-                            key={index}
-                            className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors"
-                          >
-                            <div className="flex items-center gap-3 flex-1">
-                              <File className="w-5 h-5 text-pink-600" />
-                              <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-slate-900 truncate">
-                                  {file.fileName}
-                                </p>
-                                <p className="text-xs text-slate-500">
-                                  {formatFileSize(file.fileSize)}
-                                </p>
-                              </div>
+                        <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors">
+                          <div className="flex items-center gap-3 flex-1">
+                            <File className="w-5 h-5 text-pink-600" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-slate-900 truncate">
+                                {selectedAssignment.fileRecord.fileName}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {formatFileSize(selectedAssignment.fileRecord.fileSize)}
+                              </p>
+                              <p className="text-xs text-slate-400 mt-1">
+                                Đã tải lên bởi: {selectedAssignment.fileRecord.uploadedBy}
+                              </p>
                             </div>
-                            <button
-                              onClick={() =>
-                                handleDownloadFile(file.downloadUrl, file.fileName)
-                              }
-                              className="p-2 text-slate-600 hover:text-pink-600 hover:bg-pink-50 rounded-lg transition-colors"
-                              title="Tải xuống"
-                            >
-                              <Download className="w-5 h-5" />
-                            </button>
                           </div>
-                        ))}
+                          <button
+                            onClick={() =>
+                              handleDownloadFile(
+                                selectedAssignment.fileRecord!.fileUrl,
+                                selectedAssignment.fileRecord!.fileName
+                              )
+                            }
+                            className="p-2 text-slate-600 hover:text-pink-600 hover:bg-pink-50 rounded-lg transition-colors"
+                            title="Tải xuống"
+                          >
+                            <Download className="w-5 h-5" />
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}

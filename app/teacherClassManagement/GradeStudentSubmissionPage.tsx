@@ -38,13 +38,14 @@ const GRADE_SUBMISSION_API = (submissionId: string | number) =>
 
 const FILE_DOWNLOAD_BASE = `${BASE_HTTP}/api/files`;
 
-interface SubmissionFile {
+interface FileRecord {
   id: number;
   fileName: string;
-  filePath: string;
+  fileUrl: string;
   fileType: string;
-  downloadUrl: string;
   fileSize: number;
+  folder: string;
+  uploadedBy: string;
   uploadedAt: string;
 }
 
@@ -57,7 +58,7 @@ interface Submission {
   feedback: string | null;
   assignmentId: number;
   studentId: number;
-  files: SubmissionFile[];
+  fileRecord: FileRecord | null;
 }
 
 interface ApiResponse<T> {
@@ -280,11 +281,8 @@ export default function GradeStudentSubmissionPage() {
     }
   };
 
-  const handleDownloadFile = (downloadUrl: string, fileName: string) => {
-    const fullUrl = downloadUrl.startsWith("http")
-      ? downloadUrl
-      : `${FILE_DOWNLOAD_BASE}${downloadUrl}`;
-    window.open(fullUrl, "_blank", "noopener,noreferrer");
+  const handleDownloadFile = (fileUrl: string, fileName: string) => {
+    window.open(fileUrl, "_blank", "noopener,noreferrer");
   };
 
   const filteredSubmissions = submissions.filter((submission) =>
@@ -558,7 +556,7 @@ export default function GradeStudentSubmissionPage() {
                             </div>
                             <div className="flex items-center gap-2">
                               <File className="w-3 h-3" />
-                              <span>{submission.files.length} tệp đính kèm</span>
+                              <span>{submission.fileRecord ? "1 tệp đính kèm" : "Không có tệp đính kèm"}</span>
                             </div>
                           </div>
 
@@ -676,37 +674,35 @@ export default function GradeStudentSubmissionPage() {
                     )}
 
                     {/* Files */}
-                    {selectedSubmission.files.length > 0 && (
+                    {selectedSubmission.fileRecord && (
                       <div>
                         <h4 className="text-sm font-bold uppercase tracking-wide text-slate-500 mb-3">
                           Tệp đính kèm
                         </h4>
                         <div className="space-y-2">
-                          {selectedSubmission.files.map((file) => (
-                            <div
-                              key={file.id}
-                              className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors"
-                            >
-                              <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <FileText className="w-5 h-5 text-purple-600 flex-shrink-0" />
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-slate-900 truncate">
-                                    {file.fileName}
-                                  </p>
-                                  <p className="text-xs text-slate-500">
-                                    {formatFileSize(file.fileSize)}
-                                  </p>
-                                </div>
+                          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <FileText className="w-5 h-5 text-purple-600 flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-slate-900 truncate">
+                                  {selectedSubmission.fileRecord.fileName}
+                                </p>
+                                <p className="text-xs text-slate-500">
+                                  {formatFileSize(selectedSubmission.fileRecord.fileSize)}
+                                </p>
+                                <p className="text-xs text-slate-400 mt-1">
+                                  Đã tải lên bởi: {selectedSubmission.fileRecord.uploadedBy}
+                                </p>
                               </div>
-                              <button
-                                onClick={() => handleDownloadFile(file.downloadUrl, file.fileName)}
-                                className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition"
-                                title="Tải xuống"
-                              >
-                                <Download className="w-5 h-5" />
-                              </button>
                             </div>
-                          ))}
+                            <button
+                              onClick={() => handleDownloadFile(selectedSubmission.fileRecord!.fileUrl, selectedSubmission.fileRecord!.fileName)}
+                              className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition"
+                              title="Tải xuống"
+                            >
+                              <Download className="w-5 h-5" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     )}
