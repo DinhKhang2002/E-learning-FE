@@ -305,38 +305,10 @@ export default function StudentClassPage() {
                       {activeRoom.roomName}
                     </p>
                     <button
-                      onClick={async () => {
-                        if (activeRoom.classRoomPath && authToken) {
-                          try {
-                            const storedUser = window.localStorage.getItem("user");
-                            let userId: number | null = null;
-                            if (storedUser) {
-                                try {
-                                    const user = JSON.parse(storedUser);
-                                    userId = user.id || null;
-                                } catch (error) {
-                                    console.warn("Failed to parse user info", error);
-                                }
-                            }
-                            const roomId = activeRoom.roomId;
-                            if (userId && roomId) {
-                              const response = await fetch(JOIN_ROOM_API, {
-                                method: "POST",
-                                headers: {
-                                  Authorization: `Bearer ${authToken}`,
-                                  "Content-Type": "application/json",
-                                },
-                                body: JSON.stringify({ roomId: roomId, userId: userId }),
-                              });
-                              const data = await response.json();
-                              if (!response.ok || data.code !== 1000) {
-                                console.warn("Failed to save join room history:", data?.message);
-                              }
-                            }
-                          } catch (error) {
-                            console.warn("Error calling join room API:", error);
-                          }
-                          window.location.href = activeRoom.classRoomPath;
+                      onClick={() => {
+                        if (activeRoom.classRoomPath && activeRoom.roomId) {
+                          const facialAuthUrl = `/studentClassAction/FacialAuthentication?roomId=${activeRoom.roomId}&classRoomPath=${encodeURIComponent(activeRoom.classRoomPath)}`;
+                          router.push(facialAuthUrl);
                         }
                       }}
                       className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-500 px-5 py-2.5 text-sm font-semibold text-white shadow-lg hover:shadow-xl transition-all hover:scale-105"
