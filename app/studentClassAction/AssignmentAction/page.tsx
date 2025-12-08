@@ -43,14 +43,17 @@ const SUBMISSIONS_BY_ASSIGNMENT_API = (assignmentId: string | number, studentId:
 
 const SUBMIT_ASSIGNMENT_API = `${BASE_HTTP}/api/submissions`;
 
-const FILE_DOWNLOAD_BASE = `${BASE_HTTP}/api/files`;
+const FILE_VIEW_API = (fileUrl: string) =>
+  `${BASE_HTTP}/api/files/get?fileUrl=${encodeURIComponent(fileUrl)}`;
 
-interface AssignmentFile {
+interface FileRecord {
+  id: number;
   fileName: string;
+  fileUrl: string;
   fileType: string;
-  filePath: string;
-  downloadUrl: string;
   fileSize: number;
+  folder: string;
+  uploadedBy: string;
   uploadedAt: string;
 }
 
@@ -59,21 +62,11 @@ interface Assignment {
   title: string;
   content: string;
   classId: number;
-  files: AssignmentFile[];
+  fileRecord: FileRecord | null;
   status: string;
   startAt: string;
   endAt: string;
   createdAt: string;
-}
-
-interface SubmissionFile {
-  id: number;
-  fileName: string;
-  filePath: string;
-  fileType: string;
-  downloadUrl: string;
-  fileSize: number;
-  uploadedAt: string;
 }
 
 interface Submission {
@@ -85,7 +78,7 @@ interface Submission {
   feedback: string | null;
   assignmentId: number;
   studentId: number;
-  files: SubmissionFile[];
+  fileRecord: FileRecord | null;
 }
 
 interface ApiResponse<T> {
@@ -169,6 +162,15 @@ export default function AssignmentAction() {
   const [showSubmitForm, setShowSubmitForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showFileModal, setShowFileModal] = useState(false);
+  const [viewingFile, setViewingFile] = useState<{
+    url: string;
+    fileName: string;
+    fileType: string;
+    blobUrl: string | null;
+  } | null>(null);
+  const [fileLoading, setFileLoading] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   // Submit form state
   const [submitTitle, setSubmitTitle] = useState("");
@@ -306,11 +308,87 @@ export default function AssignmentAction() {
     }
   };
 
-  const handleDownloadFile = (downloadUrl: string, fileName: string) => {
-    const fullUrl = downloadUrl.startsWith("http")
-      ? downloadUrl
-      : `${FILE_DOWNLOAD_BASE}${downloadUrl}`;
-    window.open(fullUrl, "_blank", "noopener,noreferrer");
+  const handleViewFile = async (fileUrl: string, fileName: string, fileType: string) => {
+    if (!authToken) {
+      alert("Vui lòng đăng nhập lại");
+      return;
+    }
+
+    setFileLoading(true);
+    setFileError(null);
+    setViewingFile({ url: fileUrl, fileName, fileType, blobUrl: null });
+    setShowFileModal(true);
+
+    try {
+      const apiUrl = FILE_VIEW_API(fileUrl);
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Không thể tải file: ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      setViewingFile((prev) => {
+        if (prev) {
+          return { ...prev, blobUrl };
+        }
+        return prev;
+      });
+      setFileLoading(false);
+    } catch (error) {
+      console.error("Failed to load file:", error);
+      setFileError(
+        error instanceof Error
+          ? error.message
+          : "Không thể tải file. Vui lòng thử lại."
+      );
+      setFileLoading(false);
+    }
+  };
+
+  const handleDownloadFile = async (fileUrl: string, fileName: string) => {
+    if (!authToken) {
+      alert("Vui lòng đăng nhập lại");
+      return;
+    }
+
+    try {
+      const apiUrl = FILE_VIEW_API(fileUrl);
+      const response = await fetch(apiUrl, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Không thể tải file: ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error("Failed to download file:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Không thể tải file. Vui lòng thử lại."
+      );
+    }
   };
 
   const handleSubmitAssignment = async () => {
@@ -655,7 +733,7 @@ export default function AssignmentAction() {
                               </div>
                               <div className="flex items-center gap-2">
                                 <File className="w-3 h-3" />
-                                <span>{assignment.files.length} tệp đính kèm</span>
+                                <span>{assignment.fileRecord ? "1 tệp đính kèm" : "Không có tệp đính kèm"}</span>
                               </div>
                             </div>
 
@@ -760,37 +838,41 @@ export default function AssignmentAction() {
                     </div>
 
                     {/* Assignment Files */}
-                    {selectedAssignment.files.length > 0 && (
+                    {selectedAssignment.fileRecord && (
                       <div>
                         <h4 className="text-sm font-bold uppercase tracking-wide text-slate-500 mb-3">
                           Tệp đính kèm bài tập
                         </h4>
                         <div className="space-y-2">
-                          {selectedAssignment.files.map((file, idx) => (
-                            <div
-                              key={idx}
-                              className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors"
-                            >
-                              <div className="flex items-center gap-3 flex-1 min-w-0">
-                                <FileText className="w-5 h-5 text-blue-600 flex-shrink-0" />
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-medium text-slate-900 truncate">
-                                    {file.fileName}
-                                  </p>
-                                  <p className="text-xs text-slate-500">
-                                    {formatFileSize(file.fileSize)}
-                                  </p>
-                                </div>
+                          <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-200 hover:bg-slate-100 transition-colors">
+                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                              <FileText className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-slate-900 truncate">
+                                  {selectedAssignment.fileRecord.fileName}
+                                </p>
+                                <p className="text-xs text-slate-500">
+                                  {formatFileSize(selectedAssignment.fileRecord.fileSize)}
+                                </p>
+                                <p className="text-xs text-slate-400 mt-1">
+                                  Đã tải lên bởi: {selectedAssignment.fileRecord.uploadedBy}
+                                </p>
                               </div>
-                              <button
-                                onClick={() => handleDownloadFile(file.downloadUrl, file.fileName)}
-                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                                title="Tải xuống"
-                              >
-                                <Download className="w-5 h-5" />
-                              </button>
                             </div>
-                          ))}
+                            <button
+                              onClick={() =>
+                                handleViewFile(
+                                  selectedAssignment.fileRecord!.fileUrl,
+                                  selectedAssignment.fileRecord!.fileName,
+                                  selectedAssignment.fileRecord!.fileType
+                                )
+                              }
+                              className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                              title="Xem file"
+                            >
+                              <Eye className="w-5 h-5" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     )}
@@ -841,33 +923,33 @@ export default function AssignmentAction() {
                               </div>
                             )}
 
-                            {submission.files.length > 0 && (
+                            {submission.fileRecord && (
                               <div>
                                 <h5 className="text-sm font-semibold text-slate-700 mb-2">
                                   Tệp đã nộp
                                 </h5>
                                 <div className="space-y-2">
-                                  {submission.files.map((file) => (
-                                    <div
-                                      key={file.id}
-                                      className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200"
-                                    >
-                                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                                        <File className="w-4 h-4 text-slate-400" />
-                                        <p className="text-sm text-slate-700 truncate">
-                                          {file.fileName}
-                                        </p>
-                                      </div>
-                                      <button
-                                        onClick={() =>
-                                          handleDownloadFile(file.downloadUrl, file.fileName)
-                                        }
-                                        className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
-                                      >
-                                        <Download className="w-4 h-4" />
-                                      </button>
+                                  <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-slate-200">
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                      <File className="w-4 h-4 text-slate-400" />
+                                      <p className="text-sm text-slate-700 truncate">
+                                        {submission.fileRecord.fileName}
+                                      </p>
                                     </div>
-                                  ))}
+                                    <button
+                                      onClick={() =>
+                                        handleViewFile(
+                                          submission.fileRecord!.fileUrl,
+                                          submission.fileRecord!.fileName,
+                                          submission.fileRecord!.fileType
+                                        )
+                                      }
+                                      className="p-1.5 text-blue-600 hover:bg-blue-50 rounded transition"
+                                      title="Xem file"
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
                             )}
@@ -1021,6 +1103,157 @@ export default function AssignmentAction() {
                     )}
                   </div>
                 )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* File Viewer Modal */}
+      <AnimatePresence>
+        {showFileModal && viewingFile && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[10000]"
+              onClick={() => {
+                if (viewingFile?.blobUrl) {
+                  URL.revokeObjectURL(viewingFile.blobUrl);
+                }
+                setShowFileModal(false);
+                setViewingFile(null);
+                setFileLoading(false);
+                setFileError(null);
+              }}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed inset-0 z-[10001] flex items-center justify-center p-4 overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="relative w-full max-w-6xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden max-h-[95vh] flex flex-col">
+                {/* Header */}
+                <div className="flex items-center justify-between p-6 border-b border-slate-200 bg-gradient-to-r from-blue-50 to-cyan-50">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <File className="w-6 h-6 text-blue-600 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <h2 className="text-xl font-bold text-slate-900 truncate">
+                        {viewingFile.fileName}
+                      </h2>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {viewingFile.fileType}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleDownloadFile(viewingFile.url, viewingFile.fileName)}
+                      className="p-2 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      title="Tải xuống"
+                    >
+                      <Download className="w-5 h-5" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (viewingFile?.blobUrl) {
+                          URL.revokeObjectURL(viewingFile.blobUrl);
+                        }
+                        setShowFileModal(false);
+                        setViewingFile(null);
+                        setFileLoading(false);
+                        setFileError(null);
+                      }}
+                      className="p-2 text-slate-600 hover:text-slate-900 hover:bg-white rounded-lg transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* File Content */}
+                <div className="flex-1 overflow-auto bg-slate-50 p-4">
+                  {fileLoading ? (
+                    <div className="flex items-center justify-center h-full min-h-[400px]">
+                      <div className="text-center">
+                        <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
+                        <p className="text-slate-600 font-medium">Đang tải file...</p>
+                      </div>
+                    </div>
+                  ) : fileError ? (
+                    <div className="flex flex-col items-center justify-center h-full min-h-[400px] p-8">
+                      <AlertCircle className="w-16 h-16 text-red-400 mb-4" />
+                      <p className="text-lg font-semibold text-slate-700 mb-2">
+                        Lỗi khi tải file
+                      </p>
+                      <p className="text-sm text-slate-500 mb-6">{fileError}</p>
+                      <button
+                        onClick={() => {
+                          if (viewingFile) {
+                            handleViewFile(viewingFile.url, viewingFile.fileName, viewingFile.fileType);
+                          }
+                        }}
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-cyan-700 transition-all shadow-lg hover:shadow-xl"
+                      >
+                        <Loader2 className="w-5 h-5" />
+                        Thử lại
+                      </button>
+                    </div>
+                  ) : viewingFile?.blobUrl ? (
+                    <div className="w-full h-full">
+                      {viewingFile.fileType.toLowerCase().includes("pdf") ? (
+                        <iframe
+                          src={viewingFile.blobUrl}
+                          className="w-full h-full min-h-[600px] rounded-lg border border-slate-200"
+                          title={viewingFile.fileName}
+                        />
+                      ) : viewingFile.fileType.toLowerCase().startsWith("image/") ? (
+                        <div className="flex items-center justify-center">
+                          <img
+                            src={viewingFile.blobUrl}
+                            alt={viewingFile.fileName}
+                            className="max-w-full max-h-[80vh] object-contain rounded-lg shadow-lg"
+                            onError={() => {
+                              setFileError("Không thể hiển thị hình ảnh");
+                            }}
+                          />
+                        </div>
+                      ) : viewingFile.fileType.toLowerCase().includes("text/") ||
+                        viewingFile.fileType.toLowerCase().includes("application/json") ||
+                        viewingFile.fileType.toLowerCase().includes("application/javascript") ||
+                        viewingFile.fileType.toLowerCase().includes("text/html") ||
+                        viewingFile.fileType.toLowerCase().includes("text/css") ? (
+                        <iframe
+                          src={viewingFile.blobUrl}
+                          className="w-full h-full min-h-[600px] rounded-lg border border-slate-200 bg-white"
+                          title={viewingFile.fileName}
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center h-full min-h-[400px] p-8">
+                          <File className="w-24 h-24 text-slate-300 mb-4" />
+                          <p className="text-lg font-semibold text-slate-700 mb-2">
+                            Không thể xem trước file này
+                          </p>
+                          <p className="text-sm text-slate-500 mb-6">
+                            Loại file: {viewingFile.fileType}
+                          </p>
+                          <button
+                            onClick={() =>
+                              handleDownloadFile(viewingFile.url, viewingFile.fileName)
+                            }
+                            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-cyan-700 transition-all shadow-lg hover:shadow-xl"
+                          >
+                            <Download className="w-5 h-5" />
+                            Tải xuống để xem
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
               </div>
             </motion.div>
           </>
