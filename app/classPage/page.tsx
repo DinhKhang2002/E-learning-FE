@@ -259,12 +259,13 @@ export default function ClassPage() {
 
       const roomResult = data.result as RoomResponse;
       const roomCode = roomResult.roomCode;
+      const roomId = roomResult.id;
       
       // Create room URL (same format as in classRoom page)
       const currentUrl = typeof window !== "undefined" 
         ? window.location.origin 
         : "http://localhost:3000";
-      const roomUrl = `${currentUrl}/classRoom?roomCode=${roomCode}&roomId=${roomCode}&userId=${userId}&userName=${encodeURIComponent(userName)}`;
+      const roomUrl = `${currentUrl}/classRoom?roomCode=${roomCode}&roomId=${roomId}&userId=${userId}&userName=${encodeURIComponent(userName)}`;
 
       // Save room path to database
       // Check if response has id field, otherwise we might need to extract from roomCode or use roomCode directly
@@ -298,7 +299,7 @@ export default function ClassPage() {
       }
 
       // Redirect to room page
-      router.push(`/classRoom?roomCode=${roomCode}&roomId=${roomCode}&userId=${userId}&userName=${encodeURIComponent(userName)}`);
+      router.push(`/classRoom?roomCode=${roomCode}&roomId=${roomId}&userId=${userId}&userName=${encodeURIComponent(userName)}`);
     } catch (err) {
       setError(
         err instanceof Error

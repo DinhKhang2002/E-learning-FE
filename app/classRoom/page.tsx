@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import { Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
@@ -39,20 +40,92 @@ declare global {
   }
 }
 
+const BASE_HTTP = process.env.NEXT_PUBLIC_API;
+
+const END_CALL_API = (roomId: string | number) =>
+  `${BASE_HTTP}/api/rooms/${roomId}/callout`;
+
 export default function ClassRoomPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [scriptLoaded, setScriptLoaded] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [isEndingCall, setIsEndingCall] = useState(false);
 
   const roomCode = searchParams.get("roomCode");
   const roomId = searchParams.get("roomId") || roomCode;
   const userId = searchParams.get("userId");
   const userName = searchParams.get("userName") || "User";
+  const classId = searchParams.get("classId");
 
   console.log("--------------------------------");
   console.log(roomCode, roomId, userId, userName);
+
+  // Get user role from localStorage
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const userRaw = window.localStorage.getItem("user");
+    if (userRaw) {
+      try {
+        const user = JSON.parse(userRaw);
+        setUserRole(user.role || null);
+      } catch (err) {
+        console.error("Failed to parse user:", err);
+      }
+    }
+  }, []);
+
+  const handleEndCall = async () => {
+    if (!roomId) {
+      alert("Không tìm thấy thông tin phòng họp");
+      return;
+    }
+
+    if (!confirm("Bạn có chắc chắn muốn kết thúc cuộc họp này?")) {
+      return;
+    }
+
+    setIsEndingCall(true);
+    try {
+      const token = window.localStorage.getItem("accessToken");
+      if (!token) {
+        alert("Vui lòng đăng nhập lại");
+        setIsEndingCall(false);
+        return;
+      }
+
+      const response = await fetch(END_CALL_API(roomId), {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
+
+      const data = await response.json();
+      if (!response.ok || data.code !== 1000) {
+        throw new Error(data?.message || "Không thể kết thúc cuộc họp. Vui lòng thử lại.");
+      }
+
+      // Redirect to class page
+      if (classId) {
+        router.push(`/classPage?id=${classId}`);
+      } else {
+        router.push("/homePage");
+      }
+    } catch (err) {
+      console.error("Failed to end call:", err);
+      alert(
+        err instanceof Error
+          ? err.message
+          : "Không thể kết thúc cuộc họp. Vui lòng thử lại."
+      );
+      setIsEndingCall(false);
+    }
+  };
 
   const appID = process.env.NEXT_PUBLIC_ZEGO_APP_ID
     ? parseInt(process.env.NEXT_PUBLIC_ZEGO_APP_ID)
@@ -208,6 +281,40 @@ export default function ClassRoomPage() {
           className="w-full h-[calc(100vh-4rem)]"
           style={{ minHeight: "600px" }}
         />
+        {userRole === "TEACHER" && (
+          <div className="flex justify-center items-center mt-4">
+            <button
+              type="button"
+              disabled={isEndingCall}
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={handleEndCall}
+            >
+              {isEndingCall ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Đang kết thúc...
+                </>
+              ) : (
+                <>
+                  <svg
+                    className="w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                  Kết thúc cuộc họp
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
     </main>
   );
