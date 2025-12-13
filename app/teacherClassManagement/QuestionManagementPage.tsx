@@ -18,6 +18,8 @@ import {
   Sparkles,
   Shuffle,
   ChevronLeft,
+  Search,
+  Upload,
 } from "lucide-react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
@@ -47,6 +49,10 @@ const CREATE_EXAM_FROM_QUESTIONS_API =
 
 const CREATE_RANDOM_EXAM_API =
   `${BASE_HTTP}/exams/random`;
+
+const SEARCH_QUESTIONS_API = `${BASE_HTTP}/api/questions/search`;
+
+const IMPORT_QUESTIONS_API = `${BASE_HTTP}/api/questions/import`;
 
 interface ClassData {
   id: number;
@@ -140,6 +146,18 @@ export default function QuestionManagementPage({
   const [randomHard, setRandomHard] = useState(0);
   const [randomVeryHard, setRandomVeryHard] = useState(0);
 
+  // Search states
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [searchChapter, setSearchChapter] = useState<number | null>(null);
+  const [searchLevel, setSearchLevel] = useState<QuestionLevel | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [isSearchMode, setIsSearchMode] = useState(false);
+
+  // Import states
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importFile, setImportFile] = useState<File | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const token = window.localStorage.getItem("accessToken");
@@ -215,6 +233,115 @@ export default function QuestionManagementPage({
     []
   );
 
+  const searchQuestions = useCallback(
+    async (
+      token: string,
+      id: string,
+      keyword: string | null,
+      chapter: number | null,
+      level: QuestionLevel | null
+    ) => {
+      setIsSearching(true);
+      try {
+        const response = await fetch(SEARCH_QUESTIONS_API, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            keyword: keyword && keyword.trim() ? keyword.trim() : null,
+            chapter: chapter || null,
+            classId: id,
+            level: level || null,
+          }),
+        });
+
+        const data: ApiResponse<PaginatedResponse> = await response.json();
+        if (!response.ok || data.code !== 1000 || !data.result) {
+          throw new Error(
+            data?.message || "Không thể tìm kiếm câu hỏi. Vui lòng thử lại."
+          );
+        }
+
+        setQuestions(data.result.content || []);
+        setTotalPages(data.result.totalPages || 0);
+        setTotalElements(data.result.totalElements || 0);
+        setCurrentPage(data.result.number || 0);
+        setIsSearchMode(true);
+      } catch (err) {
+        console.error("Failed to search questions:", err);
+        alert(
+          err instanceof Error
+            ? err.message
+            : "Không thể tìm kiếm câu hỏi. Vui lòng thử lại."
+        );
+        setQuestions([]);
+        setTotalPages(0);
+        setTotalElements(0);
+      } finally {
+        setIsSearching(false);
+      }
+    },
+    []
+  );
+
+  const handleImportQuestions = async () => {
+    if (!authToken || !importFile) {
+      alert("Vui lòng chọn file Excel để import");
+      return;
+    }
+
+    setIsImporting(true);
+    try {
+      const formData = new FormData();
+      formData.append("classId", classId);
+      formData.append("file", importFile);
+
+      const response = await fetch(IMPORT_QUESTIONS_API, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (!response.ok || data.code !== 1000) {
+        throw new Error(data?.message || "Không thể import câu hỏi.");
+      }
+
+      // Reset search mode and reload questions
+      setIsSearchMode(false);
+      setSearchKeyword("");
+      setSearchChapter(null);
+      setSearchLevel(null);
+      await fetchQuestions(authToken, classId, 0, pageSize);
+      setShowImportModal(false);
+      setImportFile(null);
+      alert("Import câu hỏi thành công!");
+    } catch (err) {
+      console.error("Failed to import questions:", err);
+      alert(
+        err instanceof Error
+          ? err.message
+          : "Không thể import câu hỏi. Vui lòng thử lại."
+      );
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const handleResetSearch = async () => {
+    if (!authToken) return;
+    setIsSearchMode(false);
+    setSearchKeyword("");
+    setSearchChapter(null);
+    setSearchLevel(null);
+    setCurrentPage(0);
+    await fetchQuestions(authToken, classId, 0, pageSize);
+  };
+
   const fetchQuestionDetail = useCallback(
     async (token: string, questionId: number) => {
       try {
@@ -242,7 +369,7 @@ export default function QuestionManagementPage({
   );
 
   useEffect(() => {
-    if (authToken && classId) {
+    if (authToken && classId && !isSearchMode) {
       setLoading(true);
       Promise.all([
         fetchClassDetail(authToken, classId),
@@ -251,7 +378,7 @@ export default function QuestionManagementPage({
         setLoading(false);
       });
     }
-  }, [authToken, classId, currentPage, pageSize, fetchClassDetail, fetchQuestions]);
+  }, [authToken, classId, currentPage, pageSize, fetchClassDetail, fetchQuestions, isSearchMode]);
 
   const handleCreateQuestion = async () => {
     if (!authToken) return;
@@ -711,6 +838,117 @@ export default function QuestionManagementPage({
             </div>
           </motion.div>
 
+          {/* Search Section */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15, duration: 0.4 }}
+            className="mb-6 p-6 bg-white rounded-xl shadow-sm border border-slate-200"
+          >
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+                  <Search className="w-5 h-5" />
+                  Tìm kiếm câu hỏi
+                </h3>
+                {isSearchMode && (
+                  <button
+                    onClick={handleResetSearch}
+                    className="text-sm text-violet-600 hover:text-violet-700 font-medium"
+                  >
+                    Xóa bộ lọc
+                  </button>
+                )}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Từ khóa
+                  </label>
+                  <input
+                    type="text"
+                    value={searchKeyword}
+                    onChange={(e) => setSearchKeyword(e.target.value)}
+                    placeholder="Nhập từ khóa tìm kiếm..."
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Chương
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={searchChapter || ""}
+                    onChange={(e) =>
+                      setSearchChapter(
+                        e.target.value ? parseInt(e.target.value) : null
+                      )
+                    }
+                    placeholder="Tất cả"
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Mức độ
+                  </label>
+                  <select
+                    value={searchLevel || ""}
+                    onChange={(e) =>
+                      setSearchLevel(
+                        e.target.value
+                          ? (e.target.value as QuestionLevel)
+                          : null
+                      )
+                    }
+                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  >
+                    <option value="">Tất cả</option>
+                    <option value="EASY">Dễ</option>
+                    <option value="MEDIUM">Trung bình</option>
+                    <option value="HARD">Khó</option>
+                    <option value="VERY_HARD">Rất khó</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => {
+                    if (authToken) {
+                      searchQuestions(
+                        authToken,
+                        classId,
+                        searchKeyword || null,
+                        searchChapter,
+                        searchLevel
+                      );
+                    }
+                  }}
+                  disabled={isSearching}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-violet-600 to-purple-600 text-white rounded-xl hover:from-violet-700 hover:to-purple-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                >
+                  {isSearching ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Search className="w-5 h-5" />
+                  )}
+                  {isSearching ? "Đang tìm..." : "Tìm kiếm"}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowImportModal(true);
+                  }}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl hover:from-emerald-700 hover:to-teal-700 transition-all duration-200 font-semibold shadow-lg hover:shadow-xl transform hover:scale-105"
+                >
+                  <Upload className="w-5 h-5" />
+                  Import Excel
+                </button>
+              </div>
+            </div>
+          </motion.div>
+
           {/* Stats and Controls */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -725,24 +963,31 @@ export default function QuestionManagementPage({
               <span className="text-sm font-medium text-slate-700">
                 Đã chọn: <span className="font-bold text-pink-600">{selectedQuestions.size}</span> câu hỏi
               </span>
+              {isSearchMode && (
+                <span className="text-sm font-medium text-amber-600">
+                  (Đang tìm kiếm)
+                </span>
+              )}
             </div>
-            <div className="flex items-center gap-3">
-              <label className="text-sm font-medium text-slate-700">
-                Số câu hỏi/trang:
-              </label>
-              <input
-                type="number"
-                min="5"
-                max="50"
-                value={pageSize}
-                onChange={(e) => {
-                  const size = parseInt(e.target.value) || 10;
-                  setPageSize(Math.max(5, Math.min(50, size)));
-                  setCurrentPage(0);
-                }}
-                className="w-20 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-              />
-            </div>
+            {!isSearchMode && (
+              <div className="flex items-center gap-3">
+                <label className="text-sm font-medium text-slate-700">
+                  Số câu hỏi/trang:
+                </label>
+                <input
+                  type="number"
+                  min="5"
+                  max="50"
+                  value={pageSize}
+                  onChange={(e) => {
+                    const size = parseInt(e.target.value) || 10;
+                    setPageSize(Math.max(5, Math.min(50, size)));
+                    setCurrentPage(0);
+                  }}
+                  className="w-20 px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                />
+              </div>
+            )}
           </motion.div>
 
           {/* Error State */}
@@ -928,7 +1173,7 @@ export default function QuestionManagementPage({
           </div>
 
           {/* Pagination */}
-          {totalPages > 0 && (
+          {totalPages > 0 && !isSearchMode && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -1624,6 +1869,140 @@ export default function QuestionManagementPage({
                 >
                   {isSubmitting && <Loader2 className="w-5 h-5 animate-spin" />}
                   {isSubmitting ? "Đang tạo..." : "Tạo đề thi ngẫu nhiên"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Import Excel Modal */}
+      <AnimatePresence>
+        {showImportModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-900/30 backdrop-blur-sm"
+            onClick={() => {
+              setShowImportModal(false);
+              setImportFile(null);
+            }}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden max-h-[90vh] flex flex-col"
+            >
+              {/* Header */}
+              <div className="p-6 border-b border-slate-200 bg-gradient-to-r from-emerald-50 to-teal-50">
+                <button
+                  onClick={() => {
+                    setShowImportModal(false);
+                    setImportFile(null);
+                  }}
+                  className="absolute top-4 right-4 p-2 text-slate-600 hover:text-slate-900 hover:bg-white rounded-lg transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                <h2 className="text-2xl font-bold text-slate-900 pr-12">
+                  Import câu hỏi từ Excel
+                </h2>
+                <p className="text-sm text-slate-600 mt-1">
+                  Chọn file Excel chứa danh sách câu hỏi
+                </p>
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 overflow-y-auto p-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Chọn file Excel *
+                    </label>
+                    <div className="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-violet-400 transition-colors">
+                      <input
+                        type="file"
+                        accept=".xlsx,.xls"
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setImportFile(file);
+                          }
+                        }}
+                        className="hidden"
+                        id="import-file-input"
+                      />
+                      <label
+                        htmlFor="import-file-input"
+                        className="cursor-pointer flex flex-col items-center gap-3"
+                      >
+                        <Upload className="w-12 h-12 text-slate-400" />
+                        <div>
+                          <span className="text-violet-600 font-semibold">
+                            Click để chọn file
+                          </span>
+                          <span className="text-slate-600"> hoặc kéo thả file vào đây</span>
+                        </div>
+                        <p className="text-xs text-slate-500">
+                          Hỗ trợ file .xlsx, .xls
+                        </p>
+                      </label>
+                    </div>
+                    {importFile && (
+                      <div className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <FileText className="w-5 h-5 text-violet-600" />
+                            <div>
+                              <p className="font-medium text-slate-900">
+                                {importFile.name}
+                              </p>
+                              <p className="text-sm text-slate-500">
+                                {(importFile.size / 1024).toFixed(2)} KB
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setImportFile(null)}
+                            className="p-2 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <p className="text-sm text-blue-800">
+                      <strong>Lưu ý:</strong> File Excel cần có định dạng đúng với các cột:
+                      Câu hỏi, Đáp án A, Đáp án B, Đáp án C, Đáp án D, Đáp án đúng, Mức độ, Chương.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="p-6 border-t border-slate-200 bg-slate-50 flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowImportModal(false);
+                    setImportFile(null);
+                  }}
+                  disabled={isImporting}
+                  className="flex-1 px-4 py-3 border border-slate-300 rounded-xl font-semibold text-slate-700 hover:bg-white transition-colors disabled:opacity-50"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleImportQuestions}
+                  disabled={isImporting || !importFile}
+                  className="flex-1 px-4 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-semibold hover:from-emerald-700 hover:to-teal-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isImporting && <Loader2 className="w-5 h-5 animate-spin" />}
+                  {isImporting ? "Đang import..." : "Import"}
                 </button>
               </div>
             </motion.div>
