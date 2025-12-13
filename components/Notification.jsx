@@ -10,7 +10,16 @@ import {
   X,
   User,
   MessageSquare,
+  Send,
+  FileEdit,
+  MessageCircle,
+  Video,
+  GraduationCap,
+  Upload,
+  Award,
+  ClipboardCheck,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import Portal from "./Portal";
 
 const BASE_HTTP = process.env.NEXT_PUBLIC_API;
@@ -21,20 +30,60 @@ const MARK_READ_API = (noticeId) =>
   `${BASE_HTTP}/api/notices/${noticeId}/read`;
 
 const typeConfig = {
-  ASSIGNMENT_NEW: {
-    label: "Bài tập mới",
-    accent: "bg-sky-100 text-sky-600",
-    icon: NotebookPen,
+  NEW_MESSAGE: {
+    label: "Tin nhắn mới",
+    accent: "bg-blue-100 text-blue-600",
+    icon: MessageSquare,
+  },
+  NEW_POST: {
+    label: "Bài đăng mới",
+    accent: "bg-indigo-100 text-indigo-600",
+    icon: FileEdit,
+  },
+  NEW_COMMENT: {
+    label: "Bình luận mới",
+    accent: "bg-purple-100 text-purple-600",
+    icon: MessageCircle,
+  },
+  NEW_ROOM: {
+    label: "Phòng học mới",
+    accent: "bg-cyan-100 text-cyan-600",
+    icon: Video,
   },
   ASSIGNMENT_DEADLINE: {
     label: "Hạn nộp bài",
     accent: "bg-amber-100 text-amber-600",
     icon: CalendarClock,
   },
+  EXAM_NEW: {
+    label: "Bài thi mới",
+    accent: "bg-red-100 text-red-600",
+    icon: GraduationCap,
+  },
+  ASSIGNMENT_NEW: {
+    label: "Bài tập mới",
+    accent: "bg-sky-100 text-sky-600",
+    icon: NotebookPen,
+  },
+  SUBMISSION_NEW: {
+    label: "Bài nộp mới",
+    accent: "bg-teal-100 text-teal-600",
+    icon: Upload,
+  },
+  GRADE_SUBMISSION: {
+    label: "Đã chấm điểm",
+    accent: "bg-yellow-100 text-yellow-600",
+    icon: Award,
+  },
   LEAVE_REQUEST: {
     label: "Xin nghỉ học",
     accent: "bg-emerald-100 text-emerald-600",
     icon: FileText,
+  },
+  ATTENDANCE: {
+    label: "Điểm danh",
+    accent: "bg-green-100 text-green-600",
+    icon: ClipboardCheck,
   },
 };
 
@@ -64,13 +113,31 @@ function formatDate(input) {
 }
 
 export default function Notification({ userId, authToken }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedNotification, setSelectedNotification] = useState(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [userRole, setUserRole] = useState(null);
   const menuRef = useRef(null);
   const detailRef = useRef(null);
+
+  // Get user role from localStorage
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const userRaw = window.localStorage.getItem("user");
+    if (userRaw) {
+      try {
+        const user = JSON.parse(userRaw);
+        const role = typeof user?.role === "string" ? user.role.toUpperCase() : null;
+        setUserRole(role);
+      } catch (err) {
+        console.error("Failed to parse user:", err);
+        setUserRole(null);
+      }
+    }
+  }, []);
 
   const fetchNotifications = useCallback(async () => {
     if (!authToken || !userId) return;
@@ -153,6 +220,164 @@ export default function Notification({ userId, authToken }) {
 
   const unreadCount = notifications.filter((item) => !item.read).length;
 
+  // Function to get navigation URL based on entityType, entityId and user role
+  const getNavigationUrl = async (entityType, entityId, notification) => {
+    const isTeacher = userRole === "TEACHER";
+    const isStudent = userRole === "STUDENT";
+
+    switch (entityType) {
+      case "CLASS":
+        if (isTeacher) {
+          return `/teacherClassManagement?classId=${entityId}`;
+        } else if (isStudent) {
+          return `/studentClassPage?id=${entityId}`;
+        }
+        break;
+
+      case "CONVERSATION":
+        // Messenger route - might need conversationId
+        return `/messenger?conversationId=${entityId}`;
+
+      case "ASSIGNMENT":
+        // For assignment, we need to get classId from the assignment
+        // Try to fetch assignment detail to get classId
+        try {
+          const response = await fetch(
+            `${BASE_HTTP}/api/assignments/${entityId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${authToken}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+          const data = await response.json();
+          if (data.code === 1000 && data.result?.classId) {
+            const classId = data.result.classId;
+            if (isTeacher) {
+              return `/teacherClassManagement/AssignmentManagementPage?classId=${classId}&assignmentId=${entityId}`;
+            } else if (isStudent) {
+              return `/studentClassAction/AssignmentAction?classId=${classId}&assignmentId=${entityId}`;
+            }
+          }
+        } catch (err) {
+          console.error("Failed to fetch assignment:", err);
+        }
+        // Fallback: redirect to home page
+        return isTeacher ? `/homePage` : `/homePage`;
+
+      case "SUBMISSION":
+        // For submission, we need to get assignmentId first, then classId
+        try {
+          const submissionResponse = await fetch(
+            `${BASE_HTTP}/api/submissions/${entityId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${authToken}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+          const submissionData = await submissionResponse.json();
+          if (submissionData.code === 1000 && submissionData.result?.assignmentId) {
+            const assignmentId = submissionData.result.assignmentId;
+            // Get assignment to get classId
+            const assignmentResponse = await fetch(
+              `${BASE_HTTP}/api/assignments/${assignmentId}`,
+              {
+                headers: {
+                  Authorization: `Bearer ${authToken}`,
+                  "Content-Type": "application/json",
+                },
+              }
+            );
+            const assignmentData = await assignmentResponse.json();
+            if (assignmentData.code === 1000 && assignmentData.result?.classId) {
+              const classId = assignmentData.result.classId;
+              if (isTeacher) {
+                return `/teacherClassManagement/AssignmentManagementPage?classId=${classId}&submissionId=${entityId}`;
+              } else if (isStudent) {
+                return `/studentClassAction/AssignmentAction?classId=${classId}&submissionId=${entityId}`;
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Failed to fetch submission:", err);
+        }
+        // Fallback: redirect to home page
+        return isTeacher ? `/homePage` : `/homePage`;
+
+      case "LEAVE_REQUEST":
+        // For leave request, entityId might be the leave request ID
+        // We need to get classId from the leave request
+        try {
+          const response = await fetch(
+            `${BASE_HTTP}/api/leave-requests/${entityId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${authToken}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+          const data = await response.json();
+          if (data.code === 1000 && data.result?.classId) {
+            const classId = data.result.classId;
+            if (isTeacher) {
+              return `/teacherClassManagement/AttandenceManagementPage?classId=${classId}`;
+            } else if (isStudent) {
+              return `/studentClassAction/AttandenceAction?classId=${classId}`;
+            }
+          }
+        } catch (err) {
+          console.error("Failed to fetch leave request:", err);
+        }
+        // Fallback: if entityId is classId (some cases)
+        if (isTeacher) {
+          return `/teacherClassManagement/AttandenceManagementPage?classId=${entityId}`;
+        } else if (isStudent) {
+          return `/studentClassAction/AttandenceAction?classId=${entityId}`;
+        }
+        break;
+
+      case "EXAM":
+        // For exam, entityId might be examId, we need to get classId
+        try {
+          const response = await fetch(
+            `${BASE_HTTP}/api/exams/${entityId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${authToken}`,
+                "Content-Type": "application/json",
+              },
+            }
+          );
+          const data = await response.json();
+          if (data.code === 1000 && data.result?.classId) {
+            const classId = data.result.classId;
+            if (isTeacher) {
+              return `/teacherClassManagement/ExamManagementPage?classId=${classId}&examId=${entityId}`;
+            } else if (isStudent) {
+              return `/studentClassAction/ExamAction?classId=${classId}&examId=${entityId}`;
+            }
+          }
+        } catch (err) {
+          console.error("Failed to fetch exam:", err);
+        }
+        // Fallback: if entityId is classId (some cases)
+        if (isTeacher) {
+          return `/teacherClassManagement/ExamManagementPage?classId=${entityId}`;
+        } else if (isStudent) {
+          return `/studentClassAction/ExamAction?classId=${entityId}`;
+        }
+        break;
+
+      default:
+        return null;
+    }
+    return null;
+  };
+
   const handleNotificationClick = (notification) => {
     // Dữ liệu đã có sẵn: content, sender, type, createAt...
     setSelectedNotification(notification);
@@ -168,6 +393,34 @@ export default function Notification({ userId, authToken }) {
       top: 0,
       behavior: "smooth",
     });
+  };
+
+  const handleNavigateToEntity = async (notification) => {
+    if (!notification.entityType || !notification.entityId) {
+      return;
+    }
+
+    try {
+      const url = await getNavigationUrl(
+        notification.entityType,
+        notification.entityId,
+        notification
+      );
+
+      if (url) {
+        // Close modals before navigation
+        setDetailOpen(false);
+        setSelectedNotification(null);
+        setOpen(false);
+        router.push(url);
+      } else {
+        // If no URL, show message
+        alert("Không thể chuyển hướng đến trang liên quan. Vui lòng thử lại sau.");
+      }
+    } catch (err) {
+      console.error("Failed to navigate:", err);
+      alert("Có lỗi xảy ra khi chuyển hướng. Vui lòng thử lại sau.");
+    }
   };
 
   const config = selectedNotification
@@ -365,6 +618,19 @@ export default function Notification({ userId, authToken }) {
                         </div>
                       </div>
                     </div>
+                  </div>
+                )}
+
+                {/* Navigation Button */}
+                {selectedNotification.entityType && selectedNotification.entityId && (
+                  <div className="pt-4 border-t border-slate-200">
+                    <button
+                      onClick={() => handleNavigateToEntity(selectedNotification)}
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-3 text-sm font-semibold text-white shadow-lg hover:shadow-xl transition-all hover:scale-105"
+                    >
+                      <ArrowLeft className="w-4 h-4 rotate-180" />
+                      Đi đến trang liên quan
+                    </button>
                   </div>
                 )}
               </div>
