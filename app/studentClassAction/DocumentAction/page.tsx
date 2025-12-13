@@ -27,11 +27,25 @@ const BASE_HTTP = process.env.NEXT_PUBLIC_API;
 
 const DOCUMENTS_API = (classId: string | number) =>
   `${BASE_HTTP}/api/documents/class/${classId}`;
+const GET_FILE_API = (fileUrl: string) => `${BASE_HTTP}/api/files/get?fileUrl=${encodeURIComponent(fileUrl)}`;
+
+interface FileRecord {
+  id: number;
+  fileName: string;
+  fileUrl: string;
+  fileType: string;
+  fileSize: number;
+  folder: string | null;
+  uploadedBy: string | null;
+  uploadedAt: string | null;
+}
 
 interface Document {
   id: number;
   title: string;
   filePath: string;
+  uploadedBy: string;
+  fileRecord: FileRecord | null;
   uploadedAt: string;
 }
 
@@ -137,6 +151,14 @@ export default function DocumentAction() {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDocument, setSelectedDocument] = useState<Document | null>(null);
+  
+  // File View Modal State
+  const [showFileModal, setShowFileModal] = useState(false);
+  const [viewingFileUrl, setViewingFileUrl] = useState<string | null>(null);
+  const [viewingFileName, setViewingFileName] = useState<string>("");
+  const [viewingFileType, setViewingFileType] = useState<string>("");
+  const [fileBlobUrl, setFileBlobUrl] = useState<string | null>(null);
+  const [isLoadingFile, setIsLoadingFile] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -191,14 +213,84 @@ export default function DocumentAction() {
     }
   }, [authToken, classId, fetchDocuments]);
 
-  const handleViewDocument = (document: Document) => {
-    if (document.filePath) {
+  const handleViewDocument = async (document: Document) => {
+    // Nếu có fileRecord và fileUrl, gọi API để lấy file từ S3
+    if (document.fileRecord?.fileUrl && authToken) {
+      setIsLoadingFile(true);
+      setViewingFileUrl(document.fileRecord.fileUrl);
+      setViewingFileName(document.fileRecord.fileName || document.title);
+      setViewingFileType(document.fileRecord.fileType || "application/octet-stream");
+      setShowFileModal(true);
+
+      try {
+        const response = await fetch(GET_FILE_API(document.fileRecord.fileUrl), {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Không thể tải file");
+        }
+
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        setFileBlobUrl(blobUrl);
+      } catch (err) {
+        console.error(err);
+        alert("Có lỗi xảy ra khi tải file");
+        setShowFileModal(false);
+      } finally {
+        setIsLoadingFile(false);
+      }
+    } else if (document.filePath) {
+      // Fallback: mở filePath trực tiếp nếu không có fileRecord
       window.open(document.filePath, "_blank", "noopener,noreferrer");
     }
   };
 
-  const handleDownloadDocument = (doc: Document) => {
-    if (doc.filePath) {
+  const handleCloseFileModal = () => {
+    if (fileBlobUrl) {
+      URL.revokeObjectURL(fileBlobUrl);
+      setFileBlobUrl(null);
+    }
+    setShowFileModal(false);
+    setViewingFileUrl(null);
+    setViewingFileName("");
+    setViewingFileType("");
+  };
+
+  const handleDownloadDocument = async (doc: Document) => {
+    // Ưu tiên sử dụng fileRecord.fileUrl nếu có
+    if (doc.fileRecord?.fileUrl && authToken) {
+      try {
+        const response = await fetch(GET_FILE_API(doc.fileRecord.fileUrl), {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Không thể tải file");
+        }
+
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        const link = window.document.createElement("a");
+        link.href = blobUrl;
+        link.download = doc.fileRecord.fileName || doc.title;
+        window.document.body.appendChild(link);
+        link.click();
+        window.document.body.removeChild(link);
+        URL.revokeObjectURL(blobUrl);
+      } catch (err) {
+        console.error(err);
+        alert("Có lỗi xảy ra khi tải file");
+      }
+    } else if (doc.filePath) {
+      // Fallback: sử dụng filePath nếu không có fileRecord
       // For Google Drive links, open in new tab
       if (doc.filePath.includes("drive.google.com")) {
         window.open(doc.filePath, "_blank", "noopener,noreferrer");
@@ -549,6 +641,85 @@ export default function DocumentAction() {
               </div>
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* FILE VIEW MODAL */}
+      <AnimatePresence>
+        {showFileModal && (
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white w-full max-w-6xl h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col"
+            >
+              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50 flex-shrink-0">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-800">{viewingFileName}</h2>
+                  <p className="text-sm text-slate-500 mt-1">{viewingFileType}</p>
+                </div>
+                <button 
+                  onClick={handleCloseFileModal} 
+                  className="text-slate-400 hover:text-slate-600 transition"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="flex-1 overflow-auto p-6 bg-slate-50">
+                {isLoadingFile ? (
+                  <div className="flex items-center justify-center h-full">
+                    <Loader2 className="w-10 h-10 animate-spin text-indigo-600" />
+                  </div>
+                ) : fileBlobUrl ? (
+                  <div className="w-full h-full">
+                    {viewingFileType.startsWith("image/") ? (
+                      <img 
+                        src={fileBlobUrl} 
+                        alt={viewingFileName}
+                        className="max-w-full max-h-full mx-auto object-contain rounded-lg shadow-lg"
+                      />
+                    ) : viewingFileType === "application/pdf" ? (
+                      <iframe
+                        src={fileBlobUrl}
+                        className="w-full h-full min-h-[600px] rounded-lg border border-slate-200"
+                        title={viewingFileName}
+                      />
+                    ) : viewingFileType.includes("word") || viewingFileType.includes("document") ? (
+                      <div className="flex flex-col items-center justify-center h-full text-center">
+                        <BookOpen className="w-16 h-16 text-slate-400 mb-4" />
+                        <p className="text-slate-600 mb-4">File Word không thể xem trực tiếp trong trình duyệt</p>
+                        <a
+                          href={fileBlobUrl}
+                          download={viewingFileName}
+                          className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition"
+                        >
+                          Tải xuống file
+                        </a>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center h-full text-center">
+                        <FileText className="w-16 h-16 text-slate-400 mb-4" />
+                        <p className="text-slate-600 mb-4">Loại file này không thể xem trực tiếp</p>
+                        <a
+                          href={fileBlobUrl}
+                          download={viewingFileName}
+                          className="px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition"
+                        >
+                          Tải xuống file
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <p className="text-slate-500">Không thể tải file</p>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 

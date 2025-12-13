@@ -29,7 +29,7 @@ const BASE_HTTP = process.env.NEXT_PUBLIC_API;
 const ATTENDANCE_API = (studentId: string | number, classId: string | number) =>
   `${BASE_HTTP}/api/attendance/student?studentId=${studentId}&classId=${classId}`;
 
-const LEAVE_REQUEST_API = `${BASE_HTTP}/leave-request`;
+const LEAVE_REQUEST_API = `${BASE_HTTP}/api/leave-request`;
 
 const LEAVE_REQUESTS_API = (studentId: string | number, classId: string | number) =>
   `${BASE_HTTP}/api/leave-request/student?studentId=${studentId}&classId=${classId}`;
