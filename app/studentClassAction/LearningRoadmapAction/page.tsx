@@ -1,35 +1,28 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronRight,
-  Plus,
   Loader2,
-  X,
   BookOpen,
   Layout,
-  MoreHorizontal,
-  Edit,
-  Trash2,
-  FileText
+  FileText,
+  X,
 } from "lucide-react";
-import Link from "next/link";
+import Link from "next/link"; 
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import TimelineItem from "../../components/TimelineItem";
-import ChildCard from "../../components/ChildCard";
+import StudentTimelineItem from "./components/StudentTimelineItem";
+import StudentChildCard from "./components/StudentChildCard";
 
 const BASE_HTTP = process.env.NEXT_PUBLIC_API;
 const CLASS_DETAIL_API = (classId: string | number) => `${BASE_HTTP}/api/classes/${classId}`;
 const ROADMAPS_API = (classId: string | number) => `${BASE_HTTP}/api/learning-roadmaps/class/${classId}`;
-const CREATE_ROADMAP_API = `${BASE_HTTP}/api/learning-roadmaps`;
-const UPDATE_ROADMAP_API = (id: number) => `${BASE_HTTP}/api/learning-roadmaps/${id}`;
-const DELETE_ROADMAP_API = (id: number) => `${BASE_HTTP}/api/learning-roadmaps/${id}`;
 const GET_FILE_API = (fileUrl: string) => `${BASE_HTTP}/api/files/get?fileUrl=${encodeURIComponent(fileUrl)}`;
 
-// --- INTERFACES (Giữ nguyên) ---
+// --- INTERFACES ---
 interface ClassData {
   id: number;
   name: string;
@@ -72,8 +65,10 @@ interface ApiResponse<T> {
   httpStatus: string;
 }
 
-export default function LearningRoadmapPage({ classId }: { classId: string }) {
+export default function LearningRoadmapActionPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const classId = searchParams.get("classId");
   
   // Data State
   const [authToken, setAuthToken] = useState<string | null>(null);
@@ -81,20 +76,9 @@ export default function LearningRoadmapPage({ classId }: { classId: string }) {
   const [roadmaps, setRoadmaps] = useState<Roadmap[]>([]);
   
   // UI State
-  const [isInitialLoading, setIsInitialLoading] = useState(true); // Chỉ dùng cho lần load đầu tiên
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [selectedRoadmapId, setSelectedRoadmapId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  // Modal & Form State
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [editingRoadmap, setEditingRoadmap] = useState<Roadmap | null>(null);
-  const [parentId, setParentId] = useState<number | null>(null);
-  const [formTitle, setFormTitle] = useState("");
-  const [formDescription, setFormDescription] = useState("");
-  const [formBackgroundImage, setFormBackgroundImage] = useState("");
-  const [formIconImage, setFormIconImage] = useState("");
-  const [formFile, setFormFile] = useState<File | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   
   // File View Modal State
   const [showFileModal, setShowFileModal] = useState(false);
@@ -107,6 +91,11 @@ export default function LearningRoadmapPage({ classId }: { classId: string }) {
   // 1. Check Auth & Load Data Once
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!classId) {
+      router.push("/studentClassPage");
+      return;
+    }
+    
     const token = window.localStorage.getItem("accessToken");
     if (!token) {
       router.push("/login");
@@ -147,142 +136,15 @@ export default function LearningRoadmapPage({ classId }: { classId: string }) {
         console.error(err);
         setError("Không thể tải dữ liệu lớp học.");
       } finally {
-        setIsInitialLoading(false); // Tắt loading toàn trang
+        setIsInitialLoading(false);
       }
     };
 
     fetchAllData();
   }, [classId, router]);
 
-  // 2. Logic xử lý dữ liệu Client-side (KHÔNG GỌI API)
-  // Tìm roadmap đang được chọn từ mảng `roadmaps` đã fetch từ trước
+  // 2. Logic xử lý dữ liệu Client-side
   const selectedRoadmap = roadmaps.find(r => r.id === selectedRoadmapId);
-
-  // 3. Hàm Refresh dữ liệu (Chỉ gọi khi Thêm/Sửa/Xóa thành công)
-  const refreshRoadmaps = async () => {
-    if (!authToken) return;
-    try {
-      const response = await fetch(ROADMAPS_API(classId), {
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
-      const data: ApiResponse<Roadmap[]> = await response.json();
-      if (data.code === 1000 && Array.isArray(data.result)) {
-        const sorted = data.result.sort((a, b) => (a.roadmapIndex || a.id) - (b.roadmapIndex || b.id));
-        setRoadmaps(sorted);
-        // Lưu ý: Không reset selectedRoadmapId để người dùng không bị văng ra trang đầu
-      }
-    } catch (e) { console.error(e); }
-  };
-
-  // --- HANDLERS ---
-  const handleAddRoadmap = (pid: number | null = null) => {
-    setParentId(pid);
-    setEditingRoadmap(null);
-    setFormTitle(""); setFormDescription(""); setFormBackgroundImage(""); setFormIconImage("");
-    setFormFile(null);
-    setShowAddModal(true);
-  };
-
-  const handleEditRoadmap = (roadmap: Roadmap) => {
-    setEditingRoadmap(roadmap);
-    setParentId(null);
-    setFormTitle(roadmap.title); setFormDescription(roadmap.description);
-    setFormBackgroundImage(roadmap.backgroundImage); setFormIconImage(roadmap.iconImage);
-    setFormFile(null);
-    setShowAddModal(true);
-  };
-
-  const handleSaveRoadmap = async () => {
-    if (!authToken || !formTitle.trim()) return;
-    setIsSubmitting(true);
-    try {
-      const formData = new FormData();
-      formData.append("classId", classId);
-      formData.append("title", formTitle);
-      formData.append("description", formDescription);
-      formData.append("backgroundImage", formBackgroundImage);
-      formData.append("iconImage", formIconImage);
-      
-      // Nếu có parentId, thêm vào formData (để tạo bài học con)
-      if (parentId !== null) {
-        formData.append("parentId", parentId.toString());
-      }
-      
-      // Thêm file nếu có
-      if (formFile) {
-        formData.append("file", formFile);
-      }
-      
-      // Phân biệt giữa CREATE và UPDATE
-      const isUpdate = editingRoadmap !== null;
-      const apiUrl = isUpdate ? UPDATE_ROADMAP_API(editingRoadmap.id) : CREATE_ROADMAP_API;
-      const method = isUpdate ? "PUT" : "POST";
-      
-      const response = await fetch(apiUrl, {
-        method: method,
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-        body: formData,
-      });
-      
-      const data: ApiResponse<Roadmap> = await response.json();
-      
-      if (data.code === 1000) {
-        await refreshRoadmaps();
-        setShowAddModal(false);
-        // Tự động chọn roadmap vừa tạo nếu là chương mới (không phải update)
-        if (!isUpdate && parentId === null && data.result) {
-          setSelectedRoadmapId(data.result.id);
-        }
-        // Nếu đang update roadmap đang được chọn, giữ nguyên selection
-        if (isUpdate && editingRoadmap && selectedRoadmapId === editingRoadmap.id) {
-          setSelectedRoadmapId(editingRoadmap.id);
-        }
-      } else {
-        alert(data.message || `Có lỗi xảy ra khi ${isUpdate ? "cập nhật" : "tạo"} roadmap`);
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Có lỗi xảy ra khi kết nối đến server");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleDeleteRoadmap = async (id: number) => {
-    if (!authToken) return;
-    if (!confirm("Bạn có chắc muốn xóa roadmap này? Hành động này không thể hoàn tác.")) return;
-    
-    try {
-      const response = await fetch(DELETE_ROADMAP_API(id), {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      });
-      
-      const data: ApiResponse<any> = await response.json();
-      
-      if (data.code === 1000) {
-        // Nếu xóa roadmap đang được chọn, reset selection
-        if (selectedRoadmapId === id) {
-          setSelectedRoadmapId(null);
-        }
-        await refreshRoadmaps();
-        // Tự động chọn roadmap đầu tiên nếu còn roadmap
-        const updatedRoadmaps = roadmaps.filter(r => r.id !== id);
-        if (updatedRoadmaps.length > 0 && selectedRoadmapId === id) {
-          setSelectedRoadmapId(updatedRoadmaps[0].id);
-        }
-      } else {
-        alert(data.message || "Có lỗi xảy ra khi xóa roadmap");
-      }
-    } catch (err) {
-      console.error(err);
-      alert("Có lỗi xảy ra khi kết nối đến server");
-    }
-  };
 
   const handleViewFile = async (roadmap: Roadmap) => {
     if (!authToken || !roadmap.fileRecord?.fileUrl) {
@@ -331,7 +193,6 @@ export default function LearningRoadmapPage({ classId }: { classId: string }) {
     setViewingFileType("");
   };
 
-
   // --- RENDER ---
   if (isInitialLoading) {
     return (
@@ -357,22 +218,15 @@ export default function LearningRoadmapPage({ classId }: { classId: string }) {
             <div className="flex justify-between items-end">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-900 mb-2">{classData?.name || "Lớp học"}</h1>
-                    <p className="text-slate-500">{classData?.description || "Quản lý lộ trình học tập"}</p>
+                    <p className="text-slate-500">{classData?.description || "Xem lộ trình học tập"}</p>
                 </div>
-                <button
-                    onClick={() => handleAddRoadmap(null)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-violet-600 text-white rounded-xl font-medium hover:bg-violet-700 transition shadow-lg shadow-violet-200"
-                >
-                    <Plus className="w-5 h-5" />
-                    Thêm chương mới
-                </button>
             </div>
         </div>
 
         {/* --- MAIN LAYOUT --- */}
         <div className="flex flex-col lg:flex-row gap-8 min-h-[600px] items-start">
             
-            {/* LEFT SIDEBAR: Static List (Không reload khi click) */}
+            {/* LEFT SIDEBAR: Static List */}
             <div className="w-full lg:w-[350px] flex-shrink-0 sticky top-24">
                 <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 max-h-[calc(100vh-150px)] overflow-y-auto custom-scrollbar">
                     <h2 className="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2 sticky top-0 bg-white z-10 pb-2">
@@ -385,15 +239,13 @@ export default function LearningRoadmapPage({ classId }: { classId: string }) {
                             <div className="text-center py-10 text-slate-400">Chưa có lộ trình</div>
                         ) : (
                             roadmaps.map((roadmap, index) => (
-                                <TimelineItem 
+                                <StudentTimelineItem 
                                     key={roadmap.id}
                                     roadmap={roadmap}
                                     index={index}
                                     isActive={selectedRoadmapId === roadmap.id}
                                     isLast={index === roadmaps.length - 1}
                                     onClick={() => setSelectedRoadmapId(roadmap.id)}
-                                    onEdit={handleEditRoadmap}
-                                    onDelete={handleDeleteRoadmap}
                                 />
                             ))
                         )}
@@ -401,12 +253,12 @@ export default function LearningRoadmapPage({ classId }: { classId: string }) {
                 </div>
             </div>
 
-            {/* RIGHT CONTENT: Dynamic Content (Animate on change) */}
+            {/* RIGHT CONTENT: Dynamic Content */}
             <div className="flex-1 w-full">
                 <AnimatePresence mode="wait">
                     {selectedRoadmap ? (
                         <motion.div 
-                            key={selectedRoadmap.id} // Key change triggers animation
+                            key={selectedRoadmap.id}
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, x: -20 }}
@@ -438,60 +290,28 @@ export default function LearningRoadmapPage({ classId }: { classId: string }) {
                                         <p className="text-slate-600 leading-relaxed">{selectedRoadmap.description}</p>
                                     </div>
                                 </div>
-                                
-                                <div className="flex gap-2 self-start">
-                                    <button 
-                                        onClick={() => handleEditRoadmap(selectedRoadmap)}
-                                        className="p-2 text-slate-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition"
-                                        title="Chỉnh sửa"
-                                    >
-                                        <Edit className="w-5 h-5" />
-                                    </button>
-                                    <button 
-                                        onClick={() => handleDeleteRoadmap(selectedRoadmap.id)}
-                                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
-                                        title="Xóa"
-                                    >
-                                        <Trash2 className="w-5 h-5" />
-                                    </button>
-                                </div>
                             </div>
 
-                            {/* Children List (Already loaded) */}
+                            {/* Children List */}
                             <div className="flex-1">
                                 <div className="flex items-center justify-between mb-6">
                                     <h3 className="text-lg font-bold text-slate-800">Danh sách bài học</h3>
-                                    <button 
-                                        onClick={() => handleAddRoadmap(selectedRoadmap.id)}
-                                        className="flex items-center gap-2 text-sm font-medium text-violet-600 hover:text-violet-700 bg-violet-50 hover:bg-violet-100 px-4 py-2 rounded-lg transition"
-                                    >
-                                        <Plus className="w-4 h-4" />
-                                        Thêm bài học
-                                    </button>
                                 </div>
 
                                 {!selectedRoadmap.children || selectedRoadmap.children.length === 0 ? (
                                     <div className="flex flex-col items-center justify-center py-20 border-2 border-dashed border-slate-100 rounded-2xl bg-slate-50/50">
                                         <div className="w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-sm mb-4">
-                                            <Plus className="w-8 h-8 text-slate-300" />
+                                            <BookOpen className="w-8 h-8 text-slate-300" />
                                         </div>
                                         <p className="text-slate-500 font-medium">Chưa có bài học nào trong chương này</p>
-                                        <button 
-                                            onClick={() => handleAddRoadmap(selectedRoadmap.id)}
-                                            className="mt-4 text-violet-600 hover:underline text-sm font-medium"
-                                        >
-                                            Tạo bài học đầu tiên
-                                        </button>
                                     </div>
                                 ) : (
                                     <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                                         {selectedRoadmap.children.map((child, index) => (
-                                            <ChildCard 
+                                            <StudentChildCard 
                                                 key={child.id}
                                                 roadmap={child}
                                                 index={index}
-                                                onEdit={handleEditRoadmap}
-                                                onDelete={handleDeleteRoadmap}
                                                 onViewFile={handleViewFile}
                                             />
                                         ))}
@@ -509,100 +329,6 @@ export default function LearningRoadmapPage({ classId }: { classId: string }) {
         </div>
       </div>
       
-      {/* ADD/EDIT MODAL */}
-      <AnimatePresence>
-        {showAddModal && (
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden"
-            >
-              <div className="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                <h2 className="text-xl font-bold text-slate-800">
-                  {editingRoadmap ? "Chỉnh sửa nội dung" : parentId ? "Thêm bài học mới" : "Thêm chương mới"}
-                </h2>
-                <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-slate-600">
-                    <X className="w-6 h-6" />
-                </button>
-              </div>
-              
-              <div className="p-6 space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Tiêu đề</label>
-                    <input 
-                      className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition" 
-                      placeholder="Nhập tiêu đề..." 
-                      value={formTitle} 
-                      onChange={e => setFormTitle(e.target.value)} 
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">Mô tả</label>
-                    <textarea 
-                      className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none transition" 
-                      placeholder="Nhập mô tả..." 
-                      rows={3}
-                      value={formDescription} 
-                      onChange={e => setFormDescription(e.target.value)} 
-                    />
-                  </div>
-                   <div className="grid grid-cols-2 gap-4">
-                       <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Link ảnh nền</label>
-                            <input 
-                                className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none" 
-                                placeholder="https://..." 
-                                value={formBackgroundImage} 
-                                onChange={e => setFormBackgroundImage(e.target.value)} 
-                            />
-                       </div>
-                       <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Link icon</label>
-                            <input 
-                                className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none" 
-                                placeholder="https://..." 
-                                value={formIconImage} 
-                                onChange={e => setFormIconImage(e.target.value)} 
-                            />
-                       </div>
-                   </div>
-                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">File đính kèm (tùy chọn)</label>
-                    <input 
-                      type="file"
-                      className="w-full border border-slate-200 p-3 rounded-xl focus:ring-2 focus:ring-violet-500 outline-none transition" 
-                      onChange={e => setFormFile(e.target.files?.[0] || null)} 
-                    />
-                    {formFile && (
-                      <p className="mt-2 text-sm text-slate-500">Đã chọn: {formFile.name}</p>
-                    )}
-                  </div>
-              </div>
-
-              <div className="p-6 border-t border-slate-100 flex gap-3 justify-end bg-slate-50/50">
-                  <button 
-                    onClick={() => setShowAddModal(false)} 
-                    disabled={isSubmitting}
-                    className="px-6 py-2.5 rounded-xl border border-slate-200 text-slate-600 font-medium hover:bg-white transition"
-                  >
-                    Hủy
-                  </button>
-                  <button 
-                    onClick={handleSaveRoadmap} 
-                    disabled={isSubmitting}
-                    className="px-6 py-2.5 rounded-xl bg-violet-600 text-white font-medium hover:bg-violet-700 transition flex items-center gap-2"
-                  >
-                    {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                    Lưu thay đổi
-                  </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
       {/* FILE VIEW MODAL */}
       <AnimatePresence>
         {showFileModal && (

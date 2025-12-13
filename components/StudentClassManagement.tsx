@@ -8,6 +8,7 @@ import {
   Star,
   ChevronRight,
   Menu,
+  Layout,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -30,20 +31,27 @@ const studentSections = [
   },
   {
     id: 3,
+    label: "Lộ trình học tập",
+    icon: Layout,
+    color: "from-violet-500 via-purple-500 to-fuchsia-500",
+    href: "/studentClassAction/LearningRoadmapAction",
+  },
+  {
+    id: 4,
     label: "Bài tập được giao",
     icon: FileText,
     color: "from-blue-500 via-cyan-500 to-sky-500",
     href: "/studentClassAction/AssignmentAction",
   },
   {
-    id: 4,
+    id: 5,
     label: "Hệ thống thi online",
     icon: GraduationCap,
     color: "from-amber-500 via-orange-500 to-red-500",
     href: "/studentClassAction/ExamAction",
   },
   {
-    id: 5,
+    id: 6,
     label: "Xem điểm",
     icon: Star,
     color: "from-yellow-500 via-amber-500 to-orange-500",
