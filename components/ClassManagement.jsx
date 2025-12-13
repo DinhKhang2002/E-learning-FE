@@ -16,6 +16,7 @@ import {
   FileText as FileTextIcon,
   ChevronRight,
   Menu,
+  Map,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -85,6 +86,14 @@ const managementItems = [
     color: "text-yellow-500",
     bg: "bg-yellow-50",
     href: "/classPage/grades",
+  },
+  {
+    id: 9,
+    label: "Lộ trình học tập",
+    icon: Map,
+    color: "text-purple-500",
+    bg: "bg-purple-50",
+    href: "/classPage/learning-roadmap",
   },
 ];
 

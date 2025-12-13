@@ -38,6 +38,11 @@ const UPDATE_DOCUMENT_API = (documentId: number) =>
 const DELETE_DOCUMENT_API = (documentId: number) =>
   `${BASE_HTTP}/api/documents/${documentId}`;
 
+const UPLOAD_DOCUMENT_API = `${BASE_HTTP}/api/documents`;
+
+const GET_FILE_API = (fileUrl: string) =>
+  `${BASE_HTTP}/api/files/get?fileUrl=${encodeURIComponent(fileUrl)}`;
+
 interface ClassData {
   id: number;
   name: string;
@@ -49,11 +54,24 @@ interface ClassData {
   createdAt: string;
 }
 
+interface FileRecord {
+  id: number;
+  fileName: string;
+  fileUrl: string;
+  fileType: string;
+  fileSize: number;
+  folder: string | null;
+  uploadedBy: string | null;
+  uploadedAt: string | null;
+}
+
 interface Document {
   id: number;
   title: string;
   filePath: string;
+  uploadedBy: string;
   uploadedAt: string;
+  fileRecord?: FileRecord;
 }
 
 interface ApiResponse<T> {
@@ -94,6 +112,13 @@ export default function DocumentManagementPage({
     null
   );
   const [uploaderName, setUploaderName] = useState<string>("");
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [uploadTitle, setUploadTitle] = useState("");
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadFilePath, setUploadFilePath] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
+  const [viewingFileUrl, setViewingFileUrl] = useState<string | null>(null);
+  const [isLoadingFile, setIsLoadingFile] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -283,8 +308,94 @@ export default function DocumentManagementPage({
     }
   };
 
-  const handleViewDocument = (document: Document) => {
-    setViewingDocument(document);
+  const handleViewDocument = async (document: Document) => {
+    if (!authToken) return;
+    
+    // Check if document has fileRecord with fileUrl
+    if (document.fileRecord?.fileUrl) {
+      setIsLoadingFile(true);
+      setViewingDocument(document);
+      try {
+        // Fetch file binary from API
+        const response = await fetch(GET_FILE_API(document.fileRecord.fileUrl), {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Không thể tải file. Vui lòng thử lại.");
+        }
+
+        // Get file blob
+        const blob = await response.blob();
+        // Create object URL from blob
+        const objectUrl = URL.createObjectURL(blob);
+        setViewingFileUrl(objectUrl);
+      } catch (err) {
+        console.error("Failed to load file:", err);
+        alert(
+          err instanceof Error
+            ? err.message
+            : "Không thể tải file. Vui lòng thử lại."
+        );
+        setViewingDocument(null);
+      } finally {
+        setIsLoadingFile(false);
+      }
+    } else {
+      // Fallback to old behavior if no fileRecord
+      setViewingDocument(document);
+      setViewingFileUrl(null);
+    }
+  };
+
+  const handleUploadDocument = async () => {
+    if (!authToken) return;
+    if (!uploadTitle.trim() || !uploadFile) {
+      alert("Vui lòng điền đầy đủ thông tin");
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append("classId", classId);
+      formData.append("title", uploadTitle.trim());
+      formData.append("file", uploadFile);
+      if (uploadFilePath.trim()) {
+        formData.append("filePath", uploadFilePath.trim());
+      }
+
+      const response = await fetch(UPLOAD_DOCUMENT_API, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+      if (!response.ok || data.code !== 1000) {
+        throw new Error(data?.message || "Không thể tải lên tài liệu.");
+      }
+
+      await fetchDocuments(authToken, classId);
+      setShowUploadModal(false);
+      setUploadTitle("");
+      setUploadFile(null);
+      setUploadFilePath("");
+      alert("Tải lên tài liệu thành công!");
+    } catch (err) {
+      console.error("Failed to upload document:", err);
+      alert(
+        err instanceof Error
+          ? err.message
+          : "Không thể tải lên tài liệu. Vui lòng thử lại."
+      );
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleDownloadDocument = (document: Document) => {
@@ -457,7 +568,15 @@ export default function DocumentManagementPage({
             </button>
 
             {/* Upload Button */}
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 font-semibold">
+            <button
+              onClick={() => {
+                setShowUploadModal(true);
+                setUploadTitle("");
+                setUploadFile(null);
+                setUploadFilePath("");
+              }}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 font-semibold"
+            >
               <Upload className="w-4 h-4" />
               Tải lên tài liệu mới
             </button>
@@ -565,7 +684,7 @@ export default function DocumentManagementPage({
                             {formatDate(document.uploadedAt)}
                           </td>
                           <td className="py-4 px-4 text-sm text-slate-600">
-                            {uploaderName || "—"}
+                            {document.uploadedBy || uploaderName || "—"}
                           </td>
                           <td className="py-4 px-4">
                             <div className="flex items-center gap-2">
@@ -658,7 +777,7 @@ export default function DocumentManagementPage({
 
       <Footer />
 
-      {/* PDF Viewer Modal */}
+      {/* File Viewer Modal */}
       {viewingDocument && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black bg-opacity-75">
           <div className="relative w-full max-w-6xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
@@ -667,14 +786,87 @@ export default function DocumentManagementPage({
                 {viewingDocument.title}
               </h3>
               <button
-                onClick={() => setViewingDocument(null)}
+                onClick={() => {
+                  setViewingDocument(null);
+                  if (viewingFileUrl) {
+                    URL.revokeObjectURL(viewingFileUrl);
+                    setViewingFileUrl(null);
+                  }
+                }}
                 className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-200 rounded-lg transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="flex-1 overflow-auto p-4">
-              {viewingDocument.filePath.includes("drive.google.com") ? (
+              {isLoadingFile ? (
+                <div className="w-full h-full flex items-center justify-center min-h-[600px]">
+                  <div className="text-center space-y-4">
+                    <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto" />
+                    <p className="text-slate-600">Đang tải file...</p>
+                  </div>
+                </div>
+              ) : viewingFileUrl ? (
+                (() => {
+                  const fileType = viewingDocument.fileRecord?.fileType || "";
+                  const isPDF = fileType.includes("pdf") || viewingDocument.fileRecord?.fileName.toLowerCase().endsWith(".pdf");
+                  const isImage = fileType.startsWith("image/") || 
+                    /\.(jpg|jpeg|png|gif|webp)$/i.test(viewingDocument.fileRecord?.fileName || "");
+                  const isVideo = fileType.startsWith("video/") || 
+                    /\.(mp4|webm|ogg)$/i.test(viewingDocument.fileRecord?.fileName || "");
+
+                  if (isPDF) {
+                    return (
+                      <iframe
+                        src={viewingFileUrl}
+                        className="w-full h-full min-h-[600px] border-0 rounded-lg"
+                        title={viewingDocument.title}
+                      />
+                    );
+                  } else if (isImage) {
+                    return (
+                      <div className="w-full h-full flex items-center justify-center min-h-[600px]">
+                        <img
+                          src={viewingFileUrl}
+                          alt={viewingDocument.title}
+                          className="max-w-full max-h-full object-contain rounded-lg"
+                        />
+                      </div>
+                    );
+                  } else if (isVideo) {
+                    return (
+                      <div className="w-full h-full flex items-center justify-center min-h-[600px]">
+                        <video
+                          src={viewingFileUrl}
+                          controls
+                          className="max-w-full max-h-full rounded-lg"
+                        >
+                          Trình duyệt của bạn không hỗ trợ video.
+                        </video>
+                      </div>
+                    );
+                  } else {
+                    return (
+                      <div className="w-full h-full flex items-center justify-center min-h-[600px]">
+                        <div className="text-center space-y-4">
+                          <FileText className="w-16 h-16 text-slate-400 mx-auto" />
+                          <p className="text-slate-600">
+                            Không thể xem trước loại tệp này
+                          </p>
+                          <a
+                            href={viewingFileUrl}
+                            download={viewingDocument.fileRecord?.fileName || viewingDocument.title}
+                            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                          >
+                            <Download className="w-4 h-4" />
+                            Tải xuống để xem
+                          </a>
+                        </div>
+                      </div>
+                    );
+                  }
+                })()
+              ) : viewingDocument.filePath.includes("drive.google.com") ? (
                 <div className="w-full h-full flex items-center justify-center">
                   <div className="text-center space-y-4">
                     <p className="text-slate-600">
@@ -690,15 +882,8 @@ export default function DocumentManagementPage({
                     </a>
                   </div>
                 </div>
-              ) : viewingDocument.filePath.toLowerCase().endsWith(".pdf") ||
-                viewingDocument.filePath.includes(".pdf") ? (
-                <iframe
-                  src={viewingDocument.filePath}
-                  className="w-full h-full min-h-[600px] border-0 rounded-lg"
-                  title={viewingDocument.title}
-                />
               ) : (
-                <div className="w-full h-full flex items-center justify-center">
+                <div className="w-full h-full flex items-center justify-center min-h-[600px]">
                   <div className="text-center space-y-4">
                     <p className="text-slate-600">
                       Không thể xem trước loại tệp này
@@ -776,6 +961,135 @@ export default function DocumentManagementPage({
               >
                 {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
                 {isSaving ? "Đang lưu..." : "Lưu"}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Upload Document Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-900/30 backdrop-blur-sm">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl p-6 max-w-2xl w-full border border-slate-200 shadow-lg"
+          >
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-xl font-bold text-slate-900">
+                Tải lên tài liệu mới
+              </h3>
+              <button
+                onClick={() => {
+                  setShowUploadModal(false);
+                  setUploadTitle("");
+                  setUploadFile(null);
+                  setUploadFilePath("");
+                }}
+                className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Tên tài liệu *
+                </label>
+                <input
+                  type="text"
+                  value={uploadTitle}
+                  onChange={(e) => setUploadTitle(e.target.value)}
+                  placeholder="Nhập tên tài liệu"
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  File *
+                </label>
+                <div className="border-2 border-dashed border-slate-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
+                  <input
+                    type="file"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        setUploadFile(file);
+                      }
+                    }}
+                    className="hidden"
+                    id="upload-file-input"
+                  />
+                  <label
+                    htmlFor="upload-file-input"
+                    className="cursor-pointer flex flex-col items-center gap-3"
+                  >
+                    <Upload className="w-12 h-12 text-slate-400" />
+                    <div>
+                      <span className="text-blue-600 font-semibold">
+                        Click để chọn file
+                      </span>
+                      <span className="text-slate-600"> hoặc kéo thả file vào đây</span>
+                    </div>
+                  </label>
+                </div>
+                {uploadFile && (
+                  <div className="mt-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <FileText className="w-5 h-5 text-blue-600" />
+                        <div>
+                          <p className="font-medium text-slate-900">
+                            {uploadFile.name}
+                          </p>
+                          <p className="text-sm text-slate-500">
+                            {(uploadFile.size / 1024).toFixed(2)} KB
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setUploadFile(null)}
+                        className="p-2 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Đường dẫn tệp (tùy chọn)
+                </label>
+                <input
+                  type="text"
+                  value={uploadFilePath}
+                  onChange={(e) => setUploadFilePath(e.target.value)}
+                  placeholder="Nhập đường dẫn tệp (ví dụ: https://docs.github.com/en)"
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                onClick={() => {
+                  setShowUploadModal(false);
+                  setUploadTitle("");
+                  setUploadFile(null);
+                  setUploadFilePath("");
+                }}
+                disabled={isUploading}
+                className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleUploadDocument}
+                disabled={isUploading}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-2"
+              >
+                {isUploading && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isUploading ? "Đang tải lên..." : "Tải lên"}
               </button>
             </div>
           </motion.div>

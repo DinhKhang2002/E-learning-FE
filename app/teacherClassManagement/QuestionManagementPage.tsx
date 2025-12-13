@@ -45,10 +45,10 @@ const DELETE_QUESTION_API = (questionId: number) =>
   `${BASE_HTTP}/api/questions/${questionId}`;
 
 const CREATE_EXAM_FROM_QUESTIONS_API =
-  `${BASE_HTTP}/exams/choose`;
+  `${BASE_HTTP}/api/exams/choose`;
 
 const CREATE_RANDOM_EXAM_API =
-  `${BASE_HTTP}/exams/random`;
+  `${BASE_HTTP}/api/exams/random`;
 
 const SEARCH_QUESTIONS_API = `${BASE_HTTP}/api/questions/search`;
 
