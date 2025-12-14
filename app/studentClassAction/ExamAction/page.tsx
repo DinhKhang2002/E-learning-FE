@@ -93,10 +93,11 @@ function getExamStatus(exam: Exam): ExamStatus {
   const startTime = new Date(exam.startTime);
   const endTime = new Date(exam.endTime);
   const isStarted = exam.isStarted;
+  const status = exam.status;
 
   if (now < startTime || !isStarted) {
     return "upcoming";
-  } else if (now >= startTime && now <= endTime) {
+  } else if (now >= startTime && now <= endTime && status !== "COMPLETED") {
     return "ongoing";
   } else {
     return "ended";
@@ -307,9 +308,38 @@ export default function ExamAction() {
         );
       }
 
-      // Navigate to exam online page with endTime
-      const endTimeParam = encodeURIComponent(exam.endTime);
-      router.push(`/studentClassAction/ExamOnlineAction?examId=${exam.id}&classId=${classId}&endTime=${endTimeParam}`);
+      const result = data.result;
+      const listExamAnswers = result?.listExamAnswers;
+
+      // Kiểm tra nếu listExamAnswers null hoặc rỗng
+      if (!listExamAnswers || listExamAnswers.length === 0) {
+        // Chuyển hướng đến trang xác thực khuôn mặt
+        const roomId = result?.room?.id;
+        const classRoomPath = result?.room?.classRoomPath;
+        
+        if (!roomId || !classRoomPath) {
+          throw new Error("Thiếu thông tin phòng học. Vui lòng thử lại.");
+        }
+
+        // Chuyển đến trang FacialAuthentication với roomId và classRoomPath
+        router.push(
+          `/studentClassAction/FacialAuthentication?roomId=${roomId}&classRoomPath=${encodeURIComponent(classRoomPath)}`
+        );
+      } else {
+        // Lưu listExamAnswers vào localStorage để ExamOnlineAction có thể sử dụng
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(
+            `examAnswers_${exam.id}`,
+            JSON.stringify(listExamAnswers)
+          );
+        }
+
+        // Chuyển hướng đến trang thi online với endTime
+        const endTimeParam = encodeURIComponent(result?.endTime || exam.endTime);
+        router.push(
+          `/studentClassAction/ExamOnlineAction?examId=${exam.id}&classId=${classId}&endTime=${endTimeParam}`
+        );
+      }
     } catch (err) {
       alert(
         err instanceof Error

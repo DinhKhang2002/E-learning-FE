@@ -403,7 +403,15 @@ export default function ExamManagementPage({
       }
 
       await fetchExams(authToken, classId);
-      alert("Bắt đầu bài thi thành công!");
+      
+      // Lấy classRoomPath từ response và chuyển hướng
+      const classRoomPath = data.result?.room?.classRoomPath;
+      if (classRoomPath) {
+        // Chuyển hướng đến classRoom với full URL
+        window.location.href = classRoomPath;
+      } else {
+        alert("Bắt đầu bài thi thành công!");
+      }
     } catch (err) {
       console.error("Failed to start exam:", err);
       alert(

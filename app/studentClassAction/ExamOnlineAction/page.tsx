@@ -248,7 +248,41 @@ export default function ExamOnlineAction() {
 
       initializeExam();
     }
-  }, [authToken, examId, fetchSubmissionId, fetchAllQuestions]);
+  }, [authToken, examId, fetchSubmissionId, fetchAllQuestions, endTimeParam]);
+
+  // Load saved answers from localStorage after questions are loaded
+  useEffect(() => {
+    if (questions.length > 0 && examId && typeof window !== "undefined") {
+      const savedAnswersKey = `examAnswers_${examId}`;
+      const savedAnswersJson = window.localStorage.getItem(savedAnswersKey);
+      
+      if (savedAnswersJson) {
+        try {
+          const savedAnswers: Array<{ questionId: number; selectedOption: string }> = 
+            JSON.parse(savedAnswersJson);
+          
+          // Fill answers state with saved answers
+          const answersState: AnswerState = {};
+          const submittedSet = new Set<number>();
+          
+          savedAnswers.forEach((item) => {
+            if (item.questionId && item.selectedOption) {
+              answersState[item.questionId] = item.selectedOption;
+              submittedSet.add(item.questionId);
+            }
+          });
+          
+          setAnswers(answersState);
+          setSubmittedAnswers(submittedSet);
+          
+          // Remove from localStorage after loading
+          window.localStorage.removeItem(savedAnswersKey);
+        } catch (err) {
+          console.error("Error parsing saved answers:", err);
+        }
+      }
+    }
+  }, [questions, examId]);
 
   const handleSubmitExam = async () => {
     if (!submissionId || !authToken) return;
