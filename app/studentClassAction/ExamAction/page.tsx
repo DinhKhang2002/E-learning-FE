@@ -43,6 +43,8 @@ interface Exam {
   startTime: string;
   endTime: string;
   createdAt: string;
+  isStarted: boolean;
+  status: string;
 }
 
 interface ExamResult {
@@ -90,8 +92,9 @@ function getExamStatus(exam: Exam): ExamStatus {
   const now = new Date();
   const startTime = new Date(exam.startTime);
   const endTime = new Date(exam.endTime);
+  const isStarted = exam.isStarted;
 
-  if (now < startTime) {
+  if (now < startTime || !isStarted) {
     return "upcoming";
   } else if (now >= startTime && now <= endTime) {
     return "ongoing";
@@ -353,12 +356,14 @@ export default function ExamAction() {
       total: exams.length,
       upcoming: exams.filter((exam) => {
         const start = new Date(exam.startTime);
-        return now < start;
+        const isStarted = exam.isStarted;
+        return now < start || !isStarted;
       }).length,
       ongoing: exams.filter((exam) => {
         const start = new Date(exam.startTime);
         const end = new Date(exam.endTime);
-        return now >= start && now <= end;
+        const isStarted = exam.isStarted;
+        return now >= start && now <= end && isStarted;
       }).length,
       ended: exams.filter((exam) => {
         const end = new Date(exam.endTime);
