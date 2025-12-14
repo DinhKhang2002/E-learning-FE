@@ -552,11 +552,11 @@ export default function Messenger({
                     <p>Chưa có tin nhắn nào. Hãy bắt đầu cuộc trò chuyện!</p>
                   </div>
                 ) : (
-                  messages.map((message) => {
+                  messages.map((message, index) => {
                     const isCurrentUser = message.sender.id === currentUserId;
                     return (
                       <div
-                        key={message.id}
+                        key={`message-${message.id}-${index}`}
                         className={`flex ${isCurrentUser ? "justify-end" : "justify-start"}`}
                       >
                         <div

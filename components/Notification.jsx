@@ -461,7 +461,7 @@ export default function Notification({ userId, authToken }) {
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <div class="w-full h-[1px] bg-black"></div>
+            <div className="w-full h-[1px] bg-black"></div>
             <div className="overflow-y-auto max-h-[500px]">
               {loading ? (
                 <div className="p-6 space-y-3">
