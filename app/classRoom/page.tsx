@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { Loader2, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 
@@ -60,6 +59,10 @@ export default function ClassRoomPage() {
   const userId = searchParams.get("userId");
   const userName = searchParams.get("userName") || "User";
   const classId = searchParams.get("classId");
+  const isExam = searchParams.get("isExam") === "true";
+  const examClassId = searchParams.get("examClassId");
+  const examId = searchParams.get("examId");
+  const endTime = searchParams.get("endTime");
 
   console.log("--------------------------------");
   console.log(roomCode, roomId, userId, userName);
@@ -245,7 +248,12 @@ export default function ClassRoomPage() {
   if (error) {
     return (
       <main className="flex min-h-screen flex-col bg-slate-50">
-        <Navbar />
+        <Navbar 
+          isExamRoom={isExam} 
+          examClassId={examClassId || undefined}
+          examId={examId || undefined}
+          endTime={endTime || undefined}
+        />
         <div className="flex-1 flex items-center justify-center p-4 pt-24">
           <div className="max-w-md w-full rounded-2xl border border-red-200 bg-red-50 p-6 text-center">
             <p className="text-red-600 font-semibold mb-4">{error}</p>
@@ -264,7 +272,12 @@ export default function ClassRoomPage() {
 
   return (
     <main className="flex min-h-screen flex-col bg-slate-50">
-      <Navbar />
+      <Navbar 
+        isExamRoom={isExam} 
+        examClassId={examClassId || undefined}
+        examId={examId || undefined}
+        endTime={endTime || undefined}
+      />
       <div className="flex-1 pt-16 relative">
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-slate-50 z-10">

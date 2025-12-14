@@ -315,13 +315,34 @@ export default function ExamAction() {
       if (!listExamAnswers || listExamAnswers.length === 0) {
         // Chuyển hướng đến trang xác thực khuôn mặt
         const roomId = result?.room?.id;
-        const classRoomPath = result?.room?.classRoomPath;
+        let classRoomPath = result?.room?.classRoomPath;
         
         if (!roomId || !classRoomPath) {
           throw new Error("Thiếu thông tin phòng học. Vui lòng thử lại.");
         }
 
-        // Chuyển đến trang FacialAuthentication với roomId và classRoomPath
+        // Thêm params isExam, examClassId, examId và endTime vào classRoomPath
+        const url = new URL(classRoomPath);
+        url.searchParams.set("isExam", "true");
+        if (classId) {
+          url.searchParams.set("examClassId", classId.toString());
+        }
+        url.searchParams.set("examId", exam.id.toString());
+        const endTimeParam = result?.endTime || exam.endTime;
+        if (endTimeParam) {
+          url.searchParams.set("endTime", encodeURIComponent(endTimeParam));
+        }
+        classRoomPath = url.toString();
+
+        // Lưu classRoomPath vào localStorage để có thể quay lại sau khi nộp bài
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem(
+            `examRoomPath_${exam.id}`,
+            classRoomPath
+          );
+        }
+
+        // Chuyển đến trang FacialAuthentication với roomId và classRoomPath (đã có isExam và examClassId)
         router.push(
           `/studentClassAction/FacialAuthentication?roomId=${roomId}&classRoomPath=${encodeURIComponent(classRoomPath)}`
         );

@@ -620,10 +620,24 @@ export default function ExamOnlineAction() {
                     </p>
                   </div>
                   <button
-                    onClick={() => router.push(`/studentClassAction/ExamAction?classId=${classId}`)}
+                    onClick={() => {
+                      // Lấy classRoomPath từ localStorage nếu có
+                      if (typeof window !== "undefined" && examId) {
+                        const savedRoomPath = window.localStorage.getItem(`examRoomPath_${examId}`);
+                        if (savedRoomPath) {
+                          // Xóa khỏi localStorage sau khi sử dụng
+                          window.localStorage.removeItem(`examRoomPath_${examId}`);
+                          // Chuyển hướng về cuộc họp
+                          window.location.href = savedRoomPath;
+                          return;
+                        }
+                      }
+                      // Fallback: quay lại danh sách kỳ thi nếu không có thông tin cuộc họp
+                      router.push(`/studentClassAction/ExamAction?classId=${classId}`);
+                    }}
                     className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-500 to-cyan-600 px-6 py-3 text-sm font-semibold text-white shadow-lg hover:shadow-xl transition-all"
                   >
-                    Quay lại danh sách kỳ thi
+                    Trở về Cuộc họp
                   </button>
                 </motion.div>
               ) : (

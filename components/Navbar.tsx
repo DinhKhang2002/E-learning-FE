@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import { Menu, X, LogOut, User, Settings, BookOpen, MessageSquare } from "lucide-react";
+import { Menu, X, LogOut, User, Settings, BookOpen, MessageSquare, ArrowLeft } from "lucide-react";
 import clsx from "clsx";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -31,7 +31,14 @@ const navItems = [
   { label: "Liên hệ", href: "/homePage#contact" },
 ];
 
-export default function Navbar() {
+interface NavbarProps {
+  isExamRoom?: boolean;
+  examClassId?: string | number;
+  examId?: string | number;
+  endTime?: string;
+}
+
+export default function Navbar({ isExamRoom = false, examClassId, examId, endTime }: NavbarProps = {}) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
@@ -150,6 +157,16 @@ export default function Navbar() {
                 </div>
               ) : (
                 <div className="flex items-center space-x-4">
+                  {/* Nút Trở lại trang thi trực tuyến - chỉ hiển thị khi isExamRoom=true và userRole=STUDENT */}
+                  {isExamRoom && user?.role === "STUDENT" && examClassId && examId && endTime && (
+                    <Link
+                      href={`/studentClassAction/ExamOnlineAction?examId=${examId}&classId=${examClassId}&endTime=${encodeURIComponent(endTime)}`}
+                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-600 rounded-full hover:shadow-lg hover:shadow-emerald-500/50 transition-all duration-300"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      Trở lại trang thi trực tuyến
+                    </Link>
+                  )}
                   <Notification
                     userId={user?.id}
                     authToken={
@@ -330,6 +347,17 @@ export default function Navbar() {
                 </div>
               ) : (
                 <div className="space-y-4">
+                  {/* Nút Trở lại trang thi trực tuyến - Mobile - chỉ hiển thị khi isExamRoom=true và userRole=STUDENT */}
+                  {isExamRoom && user?.role === "STUDENT" && examClassId && examId && endTime && (
+                    <Link
+                      href={`/studentClassAction/ExamOnlineAction?examId=${examId}&classId=${examClassId}&endTime=${encodeURIComponent(endTime)}`}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="w-full py-3 px-4 text-sm font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-600 rounded-xl hover:shadow-lg hover:shadow-emerald-500/50 transition-all duration-300 flex items-center justify-center gap-2"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      Trở lại trang thi trực tuyến
+                    </Link>
+                  )}
                   <div className="flex items-center space-x-3 p-3 bg-white bg-opacity-10 rounded-xl">
                     <div className="w-12 h-12 rounded-full bg-gradient-to-br from-pink-500 to-purple-600 p-0.5">
                       <div className="w-full h-full rounded-full bg-gray-900 flex items-center justify-center">
