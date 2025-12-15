@@ -109,6 +109,7 @@ export default function ExamOnlineAction() {
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [examEndTime, setExamEndTime] = useState<Date | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submittingAnswers, setSubmittingAnswers] = useState<Set<number>>(new Set());
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [examScore, setExamScore] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
@@ -421,6 +422,13 @@ export default function ExamOnlineAction() {
       return;
     }
 
+    // Set loading state for this question
+    setSubmittingAnswers((prev) => {
+      const newSet = new Set(prev);
+      newSet.add(questionId);
+      return newSet;
+    });
+
     try {
       const response = await fetch(SUBMIT_ANSWER_API(submissionId), {
         method: "POST",
@@ -456,6 +464,13 @@ export default function ExamOnlineAction() {
           ? err.message
           : "Không thể nộp đáp án. Vui lòng thử lại sau."
       );
+    } finally {
+      // Remove loading state when response is received (success or error)
+      setSubmittingAnswers((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(questionId);
+        return newSet;
+      });
     }
   };
 
@@ -692,11 +707,20 @@ export default function ExamOnlineAction() {
 
                       <button
                         onClick={() => handleSubmitAnswer(question.questionId)}
-                        disabled={!answers[question.questionId] || isSubmitting}
+                        disabled={!answers[question.questionId] || isSubmitting || submittingAnswers.has(question.questionId)}
                         className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <Send className="w-4 h-4" />
-                        Nộp đáp án
+                        {submittingAnswers.has(question.questionId) ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Đang nộp...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="w-4 h-4" />
+                            Nộp đáp án
+                          </>
+                        )}
                       </button>
                     </motion.div>
                   ))}
