@@ -17,6 +17,9 @@ import {
   RotateCcw,
   AlertCircle,
   Upload,
+  Edit,
+  Lock,
+  X,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -40,6 +43,8 @@ const BASE_HTTP = process.env.NEXT_PUBLIC_API;
 
 const USER_INFO_API = `${BASE_HTTP}/api/users/getUserInfo`;
 const SAVE_IDENTITY_API = "http://localhost:8000/api/save-identity";
+const UPDATE_USER_API = "http://localhost:8080/education/api/users";
+const CHANGE_PASSWORD_API = "http://localhost:8080/education/api/users";
 
 function formatDate(dateString: string) {
   if (!dateString) return "—";
@@ -95,6 +100,30 @@ export default function UserInfoPage() {
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadSuccess, setUploadSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  
+  // State cho modal cập nhật thông tin
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [updateForm, setUpdateForm] = useState({
+    username: "",
+    firstName: "",
+    lastName: "",
+    phoneNumber: "",
+    address: "",
+    gender: "MALE" as "MALE" | "FEMALE",
+    dob: "",
+  });
+  const [updateError, setUpdateError] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
+  
+  // State cho modal đổi mật khẩu
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    oldPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
   
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -307,6 +336,192 @@ export default function UserInfoPage() {
     }
   };
 
+  // Validation functions
+  const validatePhoneNumber = (phone: string): boolean => {
+    return /^0\d{9}$/.test(phone);
+  };
+
+  const validateUsername = (username: string): boolean => {
+    return username.length > 3;
+  };
+
+  const validatePassword = (password: string): boolean => {
+    return password.length >= 8;
+  };
+
+  // Handle open update modal
+  const handleOpenUpdateModal = () => {
+    if (!userInfo) return;
+    setUpdateForm({
+      username: userInfo.username || "",
+      firstName: userInfo.firstName || "",
+      lastName: userInfo.lastName || "",
+      phoneNumber: userInfo.phoneNumber || "",
+      address: userInfo.address || "",
+      gender: (userInfo.gender === "MALE" || userInfo.gender === "FEMALE") ? userInfo.gender as "MALE" | "FEMALE" : "MALE",
+      dob: userInfo.dob || "",
+    });
+    setUpdateError(null);
+    setShowUpdateModal(true);
+  };
+
+  // Handle update user info
+  const handleUpdateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userInfo) return;
+
+    setUpdateError(null);
+
+    // Validation
+    if (!validateUsername(updateForm.username)) {
+      setUpdateError("Tên đăng nhập phải có nhiều hơn 3 ký tự");
+      return;
+    }
+
+    if (updateForm.phoneNumber && !validatePhoneNumber(updateForm.phoneNumber)) {
+      setUpdateError("Số điện thoại phải bắt đầu từ số 0, có 10 ký tự và tất cả đều là số");
+      return;
+    }
+
+    setIsUpdating(true);
+
+    try {
+      const token = window.localStorage.getItem("accessToken");
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+
+      const response = await fetch(`${UPDATE_USER_API}/${userInfo.id}`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: updateForm.username,
+          firstName: updateForm.firstName,
+          lastName: updateForm.lastName,
+          phoneNumber: updateForm.phoneNumber || null,
+          address: updateForm.address || null,
+          gender: updateForm.gender,
+          dob: updateForm.dob || null,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.code === 1000) {
+        alert("Cập nhật thông tin thành công!");
+        setShowUpdateModal(false);
+        // Refresh user info
+        const fetchUserInfo = async () => {
+          const token = window.localStorage.getItem("accessToken");
+          if (!token) return;
+
+          try {
+            const response = await fetch(USER_INFO_API, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+                "Content-Type": "application/json",
+              },
+            });
+
+            const data = await response.json();
+            if (data.code === 1000 && data.result) {
+              setUserInfo(data.result);
+            }
+          } catch (err) {
+            console.error("Failed to refresh user info:", err);
+          }
+        };
+        fetchUserInfo();
+      } else {
+        setUpdateError(data.message || "Cập nhật thông tin thất bại!");
+      }
+    } catch (err) {
+      console.error("Error updating user info:", err);
+      setUpdateError("Có lỗi xảy ra khi cập nhật thông tin. Vui lòng thử lại.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  // Handle open change password modal
+  const handleOpenChangePasswordModal = () => {
+    setPasswordForm({
+      oldPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    });
+    setPasswordError(null);
+    setShowChangePasswordModal(true);
+  };
+
+  // Handle change password
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userInfo) return;
+
+    setPasswordError(null);
+
+    // Validation
+    if (!validatePassword(passwordForm.newPassword)) {
+      setPasswordError("Mật khẩu mới phải có ít nhất 8 ký tự");
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError("Mật khẩu mới và xác nhận mật khẩu không khớp");
+      return;
+    }
+
+    // Confirmation
+    const confirmChange = window.confirm("Bạn có chắc chắn muốn đổi mật khẩu không?");
+    if (!confirmChange) return;
+
+    setIsChangingPassword(true);
+
+    try {
+      const token = window.localStorage.getItem("accessToken");
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+
+      const response = await fetch(`${CHANGE_PASSWORD_API}/${userInfo.id}/change-password`, {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          oldPassword: passwordForm.oldPassword,
+          newPassword: passwordForm.newPassword,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.code === 1000) {
+        alert("Đổi mật khẩu thành công!");
+        setShowChangePasswordModal(false);
+        setPasswordForm({
+          oldPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        });
+      } else {
+        setPasswordError(data.message || "Đổi mật khẩu thất bại!");
+      }
+    } catch (err) {
+      console.error("Error changing password:", err);
+      setPasswordError("Có lỗi xảy ra khi đổi mật khẩu. Vui lòng thử lại.");
+    } finally {
+      setIsChangingPassword(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex flex-col">
@@ -390,13 +605,29 @@ export default function UserInfoPage() {
                   <GraduationCap className="w-4 h-4" />
                   {formatRole(userInfo.role)}
                 </div>
-                <button
-                  onClick={() => setShowCameraModal(true)}
-                  className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
-                >
-                  <Upload className="w-5 h-5" />
-                  Upload ảnh xác minh
-                </button>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => setShowCameraModal(true)}
+                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:from-indigo-700 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl"
+                  >
+                    <Upload className="w-5 h-5" />
+                    Upload ảnh xác minh
+                  </button>
+                  <button
+                    onClick={handleOpenUpdateModal}
+                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-cyan-700 transition-all shadow-lg hover:shadow-xl"
+                  >
+                    <Edit className="w-5 h-5" />
+                    Cập nhật thông tin
+                  </button>
+                  <button
+                    onClick={handleOpenChangePasswordModal}
+                    className="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-semibold hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg hover:shadow-xl"
+                  >
+                    <Lock className="w-5 h-5" />
+                    Đổi mật khẩu
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -522,6 +753,246 @@ export default function UserInfoPage() {
         </div>
       </div>
       <Footer />
+
+      {/* Update User Info Modal */}
+      <AnimatePresence>
+        {showUpdateModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+              onClick={() => setShowUpdateModal(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden max-h-[95vh] flex flex-col">
+                <div className="bg-gradient-to-r from-blue-600 to-cyan-600 p-6 text-white">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-2xl font-bold mb-2">Cập nhật thông tin</h2>
+                      <p className="text-blue-100 text-sm">Cập nhật thông tin cá nhân của bạn</p>
+                    </div>
+                    <button
+                      onClick={() => setShowUpdateModal(false)}
+                      className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                <form onSubmit={handleUpdateUser} className="flex-1 overflow-auto p-6 space-y-4">
+                  {updateError && (
+                    <div className="rounded-xl border border-red-200 bg-red-50 p-4 flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-red-700 text-sm">{updateError}</p>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500 uppercase">Tên đăng nhập *</label>
+                      <input
+                        type="text"
+                        required
+                        className="w-full p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                        value={updateForm.username}
+                        onChange={(e) => setUpdateForm({ ...updateForm, username: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500 uppercase">Số điện thoại</label>
+                      <input
+                        type="text"
+                        className="w-full p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                        value={updateForm.phoneNumber}
+                        onChange={(e) => setUpdateForm({ ...updateForm, phoneNumber: e.target.value })}
+                        placeholder="0123456789"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500 uppercase">Họ *</label>
+                      <input
+                        type="text"
+                        required
+                        className="w-full p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                        value={updateForm.firstName}
+                        onChange={(e) => setUpdateForm({ ...updateForm, firstName: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500 uppercase">Tên *</label>
+                      <input
+                        type="text"
+                        required
+                        className="w-full p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                        value={updateForm.lastName}
+                        onChange={(e) => setUpdateForm({ ...updateForm, lastName: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Địa chỉ</label>
+                    <input
+                      type="text"
+                      className="w-full p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                      value={updateForm.address}
+                      onChange={(e) => setUpdateForm({ ...updateForm, address: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500 uppercase">Giới tính *</label>
+                      <select
+                        required
+                        className="w-full p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                        value={updateForm.gender}
+                        onChange={(e) => setUpdateForm({ ...updateForm, gender: e.target.value as "MALE" | "FEMALE" })}
+                      >
+                        <option value="MALE">MALE</option>
+                        <option value="FEMALE">FEMALE</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-500 uppercase">Ngày sinh</label>
+                      <input
+                        type="date"
+                        className="w-full p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none"
+                        value={updateForm.dob}
+                        onChange={(e) => setUpdateForm({ ...updateForm, dob: e.target.value })}
+                      />
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isUpdating}
+                    className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 text-white py-4 rounded-2xl font-bold hover:from-blue-700 hover:to-cyan-700 transition-all shadow-lg shadow-blue-100 mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isUpdating ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Đang cập nhật...
+                      </span>
+                    ) : (
+                      "Cập nhật thông tin"
+                    )}
+                  </button>
+                </form>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Change Password Modal */}
+      <AnimatePresence>
+        {showChangePasswordModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+              onClick={() => setShowChangePasswordModal(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden">
+                <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-white">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-2xl font-bold mb-2">Đổi mật khẩu</h2>
+                      <p className="text-emerald-100 text-sm">Thay đổi mật khẩu của bạn</p>
+                    </div>
+                    <button
+                      onClick={() => setShowChangePasswordModal(false)}
+                      className="p-2 hover:bg-white/20 rounded-lg transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                <form onSubmit={handleChangePassword} className="p-6 space-y-4">
+                  {passwordError && (
+                    <div className="rounded-xl border border-red-200 bg-red-50 p-4 flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                      <p className="text-red-700 text-sm">{passwordError}</p>
+                    </div>
+                  )}
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Mật khẩu cũ *</label>
+                    <input
+                      type="password"
+                      required
+                      className="w-full p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none"
+                      value={passwordForm.oldPassword}
+                      onChange={(e) => setPasswordForm({ ...passwordForm, oldPassword: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Mật khẩu mới *</label>
+                    <input
+                      type="password"
+                      required
+                      className="w-full p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none"
+                      value={passwordForm.newPassword}
+                      onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                      placeholder="Tối thiểu 8 ký tự"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-500 uppercase">Xác nhận mật khẩu mới *</label>
+                    <input
+                      type="password"
+                      required
+                      className="w-full p-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-emerald-500 outline-none"
+                      value={passwordForm.confirmPassword}
+                      onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isChangingPassword}
+                    className="w-full bg-gradient-to-r from-emerald-600 to-teal-600 text-white py-4 rounded-2xl font-bold hover:from-emerald-700 hover:to-teal-700 transition-all shadow-lg shadow-emerald-100 mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isChangingPassword ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Đang đổi mật khẩu...
+                      </span>
+                    ) : (
+                      "Đổi mật khẩu"
+                    )}
+                  </button>
+                </form>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* Camera Modal for Identity Photo */}
       <AnimatePresence>
