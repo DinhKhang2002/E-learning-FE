@@ -4,8 +4,11 @@ import { useEffect, useState } from "react";
 import StudentHomePage from "./studentHomePage";
 import TeacherHomePage from "./teacherHomePage";
 import UnloginHomePage from "./unloginHomePage";
+import AdminDashboard from "@/app/adminDashboard/page";
 
-type RoleState = "loading" | "STUDENT" | "TEACHER" | "GUEST";
+type RoleState = "loading" | "STUDENT" | "TEACHER" | "GUEST" | "ADMIN";
+
+
 
 export default function HomePageRoute() {
   const [role, setRole] = useState<RoleState>("loading");
@@ -26,6 +29,8 @@ export default function HomePageRoute() {
         setRole("TEACHER");
       } else if (userRole === "STUDENT") {
         setRole("STUDENT");
+      } else if (userRole === "ADMIN") {
+        setRole("ADMIN");
       } else {
         setRole("GUEST");
       }
@@ -49,6 +54,9 @@ export default function HomePageRoute() {
 
   if (role === "STUDENT") {
     return <StudentHomePage />;
+  }
+  if (role === "ADMIN") {
+    return <AdminDashboard />;
   }
 
   return <UnloginHomePage />;
