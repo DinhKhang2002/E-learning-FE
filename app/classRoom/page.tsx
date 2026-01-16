@@ -163,8 +163,8 @@ export default function ClassRoomPage() {
         zegoInitialized.current = true;
 
         const decodedUserName = decodeURIComponent(userName);
-        const appID = process.env.NEXT_PUBLIC_ZEGO_APP_ID ? parseInt(process.env.NEXT_PUBLIC_ZEGO_APP_ID) : 1059704281;
-        const serverSecret = process.env.NEXT_PUBLIC_ZEGO_SERVER_SECRET || "8a643e58596b31f615c0de0e4dc9860e";
+        const appID = process.env.NEXT_PUBLIC_ZEGO_APP_ID ? parseInt(process.env.NEXT_PUBLIC_ZEGO_APP_ID) : 91239007;
+        const serverSecret = process.env.NEXT_PUBLIC_ZEGO_SERVER_SECRET || "933616504160df12926de3e919ac4934";
 
         const kitToken = ZegoUIKitPrebuilt.generateKitTokenForTest(
           appID,
