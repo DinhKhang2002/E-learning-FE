@@ -17,6 +17,7 @@ import {
   ChevronRight,
   Menu,
   Map,
+  BarChart3,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
@@ -94,6 +95,14 @@ const managementItems = [
     color: "text-purple-500",
     bg: "bg-purple-50",
     href: "/classPage/learning-roadmap",
+  },
+  {
+    id: 10,
+    label: "Thống kê lớp học",
+    icon: BarChart3,
+    color: "text-teal-500",
+    bg: "bg-teal-50",
+    href: "/classDashboard",
   },
 ];
 
