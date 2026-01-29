@@ -46,7 +46,7 @@ export default function ClassCard({
           )}
         </div>
 
-        <div className="flex flex-col gap-2">
+        {/* <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between text-sm font-medium text-slate-500">
             <span>Tiến độ</span>
             <span className="text-sky-600">{progress}%</span>
@@ -57,7 +57,7 @@ export default function ClassCard({
               className="h-full rounded-full bg-gradient-to-r from-sky-500 to-blue-600 transition-all duration-300"
             />
           </div>
-        </div>
+        </div> */}
       </div>
 
       <button

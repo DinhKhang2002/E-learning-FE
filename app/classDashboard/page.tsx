@@ -173,8 +173,20 @@ export default function ClassDashboardPage() {
 
         {/* Info Cards Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-          <StatCard icon={<GraduationCap />} label="Kỳ thi đã hoàn thành" value={stats?.summary.totalExams} color="blue" />
-          <StatCard icon={<FileText />} label="Bài tập đã giao" value={stats?.summary.totalAssignments} color="purple" />
+          <StatCard
+            icon={<GraduationCap />}
+            label="Kỳ thi đã hoàn thành"
+            value={stats?.summary.totalExams}
+            color="blue"
+            onClick={classId ? () => router.push(`/classPage/exams?classId=${classId}`) : undefined}
+          />
+          <StatCard
+            icon={<FileText />}
+            label="Bài tập đã giao"
+            value={stats?.summary.totalAssignments}
+            color="purple"
+            onClick={classId ? () => router.push(`/classPage/assignments?classId=${classId}`) : undefined}
+          />
           <StatCard icon={<TrendingUp />} label="Tỉ lệ chuyên cần trung bình" value={`${data[0]?.attendanceRate}%`} color="emerald" />
         </div>
 
@@ -311,14 +323,28 @@ export default function ClassDashboardPage() {
 }
 
 // Sub-components
-function StatCard({ icon, label, value, color }: { icon: any, label: string, value: any, color: string }) {
+interface StatCardProps {
+  icon: React.ReactNode;
+  label: string;
+  value: any;
+  color: string;
+  onClick?: () => void;
+}
+function StatCard({ icon, label, value, color, onClick }: StatCardProps) {
   const colors: any = {
     blue: "from-blue-500 to-blue-600 shadow-blue-200",
     purple: "from-purple-500 to-purple-600 shadow-purple-200",
     emerald: "from-emerald-500 to-emerald-600 shadow-emerald-200"
   };
   return (
-    <motion.div whileHover={{ y: -5 }} className={`bg-gradient-to-br ${colors[color]} p-6 rounded-[2rem] shadow-lg text-white`}>
+    <motion.div
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      whileHover={{ y: -5 }}
+      className={`bg-gradient-to-br ${colors[color]} p-6 rounded-[2rem] shadow-lg text-white ${onClick ? "cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/50 focus:ring-offset-2 focus:ring-offset-transparent" : ""}`}
+      onClick={onClick}
+      onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
+    >
       <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-6">
         {icon}
       </div>

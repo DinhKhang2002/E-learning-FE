@@ -779,7 +779,7 @@ export default function DocumentManagementPage({
 
       {/* File Viewer Modal */}
       {viewingDocument && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black bg-opacity-75">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-gray-900/30 bg-opacity-75">
           <div className="relative w-full max-w-6xl bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50">
               <h3 className="text-lg font-semibold text-slate-900">
