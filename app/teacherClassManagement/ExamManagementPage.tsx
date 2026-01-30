@@ -19,6 +19,7 @@ import {
   AlertCircle,
   List,
   ChevronLeft,
+  BarChart2,
 } from "lucide-react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
@@ -684,6 +685,16 @@ export default function ExamManagementPage({
                               title="Xem chi tiết"
                             >
                               <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                router.push(`/examDashboard?examId=${exam.id}&classId=${classId}`);
+                              }}
+                              className="p-2 text-slate-600 hover:text-cyan-600 hover:bg-cyan-50 rounded-lg transition-colors"
+                              title="Xem thống kê chi tiết"
+                            >
+                              <BarChart2 className="w-4 h-4" />
                             </button>
                             <button
                               onClick={(e) => {
