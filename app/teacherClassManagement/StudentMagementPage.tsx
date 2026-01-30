@@ -21,6 +21,8 @@ import {
   Hash,
   BookOpen,
   UserCheck,
+  Clock,
+  CheckCircle,
 } from "lucide-react";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
@@ -39,6 +41,12 @@ const ADD_STUDENT_API = `${BASE_HTTP}/api/class-students`;
 
 const DELETE_STUDENT_API = (classId: string | number, studentId: string | number) =>
   `${BASE_HTTP}/api/class-students?classId=${classId}&studentId=${studentId}`;
+
+const GET_PENDING_STUDENTS_API = (classId: string | number) =>
+  `${BASE_HTTP}/api/class-students/class/${classId}/get-confirm`;
+
+const CONFIRM_STUDENT_API = (classId: string | number, studentId: number) =>
+  `${BASE_HTTP}/api/class-students/confirm-student?classId=${classId}&studentId=${studentId}`;
 
 interface ClassData {
   id: number;
@@ -93,6 +101,10 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
   const [showMessagingModal, setShowMessagingModal] = useState(false);
   const [selectedStudentForMessaging, setSelectedStudentForMessaging] = useState<Student | null>(null);
   const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [showPendingModal, setShowPendingModal] = useState(false);
+  const [pendingStudents, setPendingStudents] = useState<Student[]>([]);
+  const [pendingLoading, setPendingLoading] = useState(false);
+  const [confirmingStudentId, setConfirmingStudentId] = useState<number | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -232,6 +244,70 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
       );
     } finally {
       setIsAddingStudent(false);
+    }
+  };
+
+  const fetchPendingStudents = useCallback(
+    async (token: string) => {
+      setPendingLoading(true);
+      try {
+        const response = await fetch(GET_PENDING_STUDENTS_API(classId), {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const data: ApiResponse<Student[]> = await response.json();
+        if (data.code === 1000 && data.result) {
+          setPendingStudents(data.result);
+        } else {
+          setPendingStudents([]);
+        }
+      } catch {
+        setPendingStudents([]);
+      } finally {
+        setPendingLoading(false);
+      }
+    },
+    [classId]
+  );
+
+  const handleOpenPendingModal = () => {
+    setShowPendingModal(true);
+    if (authToken) fetchPendingStudents(authToken);
+  };
+
+  const handleConfirmStudent = async (studentId: number) => {
+    if (
+      !confirm(
+        "Bạn có chắc chắn muốn xác nhận cho học sinh này tham gia lớp học?"
+      )
+    ) {
+      return;
+    }
+    if (!authToken) {
+      alert("Không tìm thấy thông tin đăng nhập. Vui lòng đăng nhập lại.");
+      return;
+    }
+    setConfirmingStudentId(studentId);
+    try {
+      const response = await fetch(CONFIRM_STUDENT_API(classId, studentId), {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      const data = await response.json();
+      if (!response.ok || data.code !== 1000) {
+        throw new Error(data?.message || "Không thể xác nhận học sinh.");
+      }
+      await fetchPendingStudents(authToken);
+      if (authToken) await fetchStudents(authToken, classId);
+      alert("Xác nhận học sinh thành công!");
+    } catch (err) {
+      console.error("Failed to confirm student:", err);
+      alert(
+        err instanceof Error
+          ? err.message
+          : "Không thể xác nhận học sinh. Vui lòng thử lại."
+      );
+    } finally {
+      setConfirmingStudentId(null);
     }
   };
 
@@ -439,13 +515,22 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
           >
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
               <h2 className="text-xl font-bold text-slate-900">Danh sách học sinh</h2>
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold text-sm"
-              >
-                <Plus className="w-4 h-4" />
-                Thêm học sinh
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleOpenPendingModal}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors font-semibold text-sm"
+                >
+                  <Clock className="w-4 h-4" />
+                  Danh sách chờ
+                </button>
+                <button
+                  onClick={() => setShowAddModal(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-semibold text-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  Thêm học sinh
+                </button>
+              </div>
             </div>
 
             {/* Search Bar */}
@@ -658,6 +743,88 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
                 )}
                 {isAddingStudent ? "Đang thêm..." : "Thêm"}
               </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Pending list modal (Danh sách chờ) */}
+      {showPendingModal && (
+        <div className="fixed inset-0 bg-gray-500/60 flex items-center justify-center z-50 p-4">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[85vh] flex flex-col"
+          >
+            <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <Clock className="w-5 h-5 text-amber-500" />
+                Danh sách chờ xác nhận
+              </h3>
+              <button
+                onClick={() => setShowPendingModal(false)}
+                className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                aria-label="Đóng"
+              >
+                <span className="text-xl leading-none">×</span>
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto flex-1">
+              {pendingLoading ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Loader2 className="w-10 h-10 animate-spin text-amber-500 mb-3" />
+                  <p className="text-slate-500 text-sm">Đang tải danh sách...</p>
+                </div>
+              ) : pendingStudents.length === 0 ? (
+                <div className="text-center py-12 text-slate-500">
+                  <UserCheck className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                  <p className="font-medium">Chưa có đăng ký chờ xác nhận</p>
+                </div>
+              ) : (
+                <ul className="space-y-3">
+                  {pendingStudents.map((student) => (
+                    <li
+                      key={student.id}
+                      className="flex items-center justify-between gap-4 p-4 rounded-xl border border-slate-100 hover:bg-slate-50/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <img
+                          src={student.avatar || "/avatar-default.png"}
+                          alt={`${student.firstName} ${student.lastName}`}
+                          className="w-11 h-11 rounded-full object-cover shrink-0"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src =
+                              "/avatar-default.png";
+                          }}
+                        />
+                        <div className="min-w-0">
+                          <p className="font-semibold text-slate-900 truncate">
+                            {student.firstName} {student.lastName}
+                          </p>
+                          <p className="text-sm text-slate-500 truncate">
+                            @{student.username}
+                          </p>
+                          <p className="text-xs text-slate-400 truncate">
+                            {student.email}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleConfirmStudent(student.id)}
+                        disabled={confirmingStudentId === student.id}
+                        className="shrink-0 inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                      >
+                        {confirmingStudentId === student.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <CheckCircle className="w-4 h-4" />
+                        )}
+                        Xác nhận
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
           </motion.div>
         </div>
