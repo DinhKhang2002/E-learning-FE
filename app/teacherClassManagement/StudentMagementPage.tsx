@@ -787,7 +787,11 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
                       key={student.id}
                       className="flex items-center justify-between gap-4 p-4 rounded-xl border border-slate-100 hover:bg-slate-50/50 transition-colors"
                     >
-                      <div className="flex items-center gap-3 min-w-0">
+                      <button
+                        type="button"
+                        onClick={() => handleViewDetail(student)}
+                        className="flex items-center gap-3 min-w-0 text-left rounded-lg hover:bg-slate-100/80 transition-colors -m-1 p-1 cursor-pointer"
+                      >
                         <img
                           src={student.avatar || "/avatar-default.png"}
                           alt={`${student.firstName} ${student.lastName}`}
@@ -808,7 +812,7 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
                             {student.email}
                           </p>
                         </div>
-                      </div>
+                      </button>
                       <button
                         onClick={() => handleConfirmStudent(student.id)}
                         disabled={confirmingStudentId === student.id}
@@ -935,6 +939,20 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
                       </div>
                     </div>
                   </div>
+
+                  <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-white p-5 border-2 border-slate-200 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-100 to-sky-100 text-cyan-600 flex-shrink-0">
+                        <User size={20} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Giới tính</p>
+                        <p className="text-slate-900 font-medium">
+                          {selectedStudent.gender === "MALE" ? "Nam" : selectedStudent.gender === "FEMALE" ? "Nữ" : selectedStudent.gender || "—"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -955,6 +973,20 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
                       <div>
                         <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Tên đăng nhập</p>
                         <p className="text-slate-900 font-medium font-mono">{selectedStudent.username}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-white p-5 border-2 border-slate-200 shadow-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 text-slate-600 flex-shrink-0">
+                        <Hash size={20} />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Vai trò</p>
+                        <p className="text-slate-900 font-medium">
+                          {selectedStudent.role === "STUDENT" ? "Học sinh" : selectedStudent.role === "TEACHER" ? "Giáo viên" : selectedStudent.role === "ADMIN" ? "Quản trị viên" : selectedStudent.role || "—"}
+                        </p>
                       </div>
                     </div>
                   </div>
