@@ -86,7 +86,7 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
   const [currentPage, setCurrentPage] = useState(1);
   const [isAddingStudent, setIsAddingStudent] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [studentIdToAdd, setStudentIdToAdd] = useState("");
+  const [studentUsernameToAdd, setStudentUsernameToAdd] = useState("");
   const [deletingStudentId, setDeletingStudentId] = useState<number | null>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -193,8 +193,8 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
   }, [authToken, classId, fetchClassDetail, fetchStudents]);
 
   const handleAddStudent = async () => {
-    if (!authToken || !studentIdToAdd.trim()) {
-      alert("Vui lòng nhập mã học sinh");
+    if (!authToken || !studentUsernameToAdd.trim()) {
+      alert("Vui lòng nhập username học sinh");
       return;
     }
 
@@ -207,8 +207,8 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          classId: classId,
-          studentId: studentIdToAdd.trim(),
+          classId: String(classId),
+          studentUsername: studentUsernameToAdd.trim(),
         }),
       });
 
@@ -221,7 +221,7 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
         await fetchStudents(authToken, classId);
       }
       setShowAddModal(false);
-      setStudentIdToAdd("");
+      setStudentUsernameToAdd("");
       alert("Thêm học sinh thành công!");
     } catch (err) {
       console.error("Failed to add student:", err);
@@ -627,13 +627,13 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
             </h3>
             <div className="mb-4">
               <label className="block text-sm font-medium text-slate-700 mb-2">
-                Mã học sinh (ID)
+                Username học sinh
               </label>
               <input
                 type="text"
-                value={studentIdToAdd}
-                onChange={(e) => setStudentIdToAdd(e.target.value)}
-                placeholder="Nhập mã học sinh"
+                value={studentUsernameToAdd}
+                onChange={(e) => setStudentUsernameToAdd(e.target.value)}
+                placeholder="Nhập username (vd: hieu_nguyen)"
                 className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -641,7 +641,7 @@ export default function StudentManagementPage({ classId }: { classId: string }) 
               <button
                 onClick={() => {
                   setShowAddModal(false);
-                  setStudentIdToAdd("");
+                  setStudentUsernameToAdd("");
                 }}
                 disabled={isAddingStudent}
                 className="px-4 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50"
