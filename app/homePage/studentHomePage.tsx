@@ -14,6 +14,7 @@ import {
   UserPlus,
   X,
   Hash,
+  Search,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -28,6 +29,9 @@ const STUDENT_CLASSES_API = (studentId: string | number) =>
   `${BASE_HTTP}/api/class-students/classes/${studentId}`;
 const JOIN_CLASS_API = `${BASE_HTTP}/api/class-students/class-code`;
 const SUGGESTED_CLASSES_API = `${BASE_HTTP}/api/classes/suggested`;
+
+const SEARCH_CLASSES_API = (keyword: string) =>
+  `${BASE_HTTP}/api/classes/search?keyword=${encodeURIComponent(keyword.trim())}`;
 
 interface ClassData {
   id: number;
@@ -146,6 +150,12 @@ export default function HomePage() {
   const [suggestedClasses, setSuggestedClasses] = useState<SuggestedClassApi[]>([]);
   const [suggestedLoading, setSuggestedLoading] = useState(false);
 
+  // Search classes
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [searchResults, setSearchResults] = useState<SuggestedClassApi[] | null>(null);
+  const [lastSearchedKeyword, setLastSearchedKeyword] = useState<string | null>(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+
   useEffect(() => {
     if (typeof window === "undefined") return;
     const token = window.localStorage.getItem("accessToken");
@@ -243,6 +253,33 @@ export default function HomePage() {
       fetchSuggestedClasses(authToken);
     }
   }, [authToken, fetchSuggestedClasses]);
+
+  const handleSearchClasses = useCallback(async () => {
+    const keyword = searchKeyword.trim();
+    if (!keyword) return;
+    if (!authToken) {
+      router.push("/login");
+      return;
+    }
+    setSearchLoading(true);
+    setSearchResults(null);
+    setLastSearchedKeyword(keyword);
+    try {
+      const response = await fetch(SEARCH_CLASSES_API(keyword), {
+        headers: { Authorization: `Bearer ${authToken}` },
+      });
+      const data: ApiResponse<SuggestedClassApi[]> = await response.json();
+      if (data.code === 1000 && Array.isArray(data.result)) {
+        setSearchResults(data.result);
+      } else {
+        setSearchResults([]);
+      }
+    } catch {
+      setSearchResults([]);
+    } finally {
+      setSearchLoading(false);
+    }
+  }, [searchKeyword, authToken, router]);
 
   const handleOpenJoinClassModal = () => {
     setClassCode("");
@@ -360,14 +397,71 @@ export default function HomePage() {
                   hợp với bạn.
                 </p>
               </div>
-              <button
-                type="button"
-                className="inline-flex items-center justify-center rounded-2xl border border-sky-200 bg-white px-5 py-3 text-sm font-semibold text-sky-600 shadow-sm transition hover:border-sky-300 hover:bg-sky-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
-              >
-                Tìm khóa học
-              </button>
+              <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                <input
+                  type="text"
+                  value={searchKeyword}
+                  onChange={(e) => setSearchKeyword(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleSearchClasses()}
+                  placeholder="Tìm lớp học (vd: Java, React...)"
+                  className="rounded-xl border border-sky-200 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent min-w-[200px]"
+                />
+                <button
+                  type="button"
+                  onClick={handleSearchClasses}
+                  disabled={searchLoading}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-sky-200 bg-white px-5 py-2.5 text-sm font-semibold text-sky-600 shadow-sm transition hover:border-sky-300 hover:bg-sky-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {searchLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Search className="w-4 h-4" />
+                  )}
+                  Tìm kiếm
+                </button>
+              </div>
             </div>
           </motion.header>
+
+          {/* Search results */}
+          {(searchResults !== null || searchLoading) && (
+            <motion.section
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-8 rounded-2xl border border-slate-100 bg-white p-6 shadow-sm"
+            >
+              <h2 className="text-xl font-semibold text-slate-900 mb-4">
+                Kết quả tìm kiếm
+                {lastSearchedKeyword && (
+                  <span className="text-slate-500 font-normal ml-2">
+                    cho &quot;{lastSearchedKeyword}&quot;
+                  </span>
+                )}
+              </h2>
+              {searchLoading ? (
+                <div className="flex justify-center py-12">
+                  <Loader2 className="w-10 h-10 animate-spin text-sky-500" />
+                </div>
+              ) : searchResults !== null && searchResults.length === 0 ? (
+                <p className="py-8 text-center text-slate-500">
+                  Không tìm thấy lớp học nào phù hợp.
+                </p>
+              ) : searchResults !== null && searchResults.length > 0 ? (
+                <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+                  {searchResults.map((item, index) => (
+                    <SuggestClassCard
+                      key={item.id}
+                      title={item.name}
+                      author={item.powerBy || item.teacherName || "—"}
+                      accent={SUGGESTED_ACCENTS[index % SUGGESTED_ACCENTS.length]}
+                      illustration={getClassIllustration(item.name)}
+                      onClick={() => router.push(`/classIntroduction?classId=${item.id}`)}
+                    />
+                  ))}
+                </div>
+              ) : null}
+            </motion.section>
+          )}
 
           <div className="mt-10 grid gap-8 lg:grid-cols-[2fr,1fr]">
             <div className="flex flex-col gap-10">

@@ -13,6 +13,7 @@ import {
   CheckCircle2,
   Hash,
   AlertCircle,
+  UserPlus,
 } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -21,6 +22,8 @@ const BASE_HTTP = process.env.NEXT_PUBLIC_API;
 
 const CLASS_DETAIL_API = (classId: string | number) =>
   `${BASE_HTTP}/api/classes/${classId}`;
+
+const JOIN_CLASS_API = `${BASE_HTTP}/api/class-students/class-code`;
 
 interface ClassIntroductionParsed {
   class_id?: number;
@@ -88,6 +91,8 @@ export default function ClassIntroductionPage() {
   const [classData, setClassData] = useState<ClassDetailApi | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [registerMessage, setRegisterMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const intro = useMemo(() => {
     if (!classData?.classIntroduction) return null;
@@ -168,6 +173,44 @@ export default function ClassIntroductionPage() {
   const prerequisites = intro?.prerequisites;
   const longDescription = intro?.description ?? classData.description;
 
+  const handleRegister = async () => {
+    const code = classData.code?.trim();
+    if (!code) {
+      setRegisterMessage({ type: "error", text: "Không có mã lớp để đăng ký." });
+      return;
+    }
+    const token = localStorage.getItem("accessToken");
+    if (!token) {
+      setRegisterMessage({ type: "error", text: "Vui lòng đăng nhập để đăng ký học." });
+      return;
+    }
+    setIsRegistering(true);
+    setRegisterMessage(null);
+    try {
+      const response = await fetch(JOIN_CLASS_API, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ code }),
+      });
+      const data: ApiResponse<unknown> = await response.json();
+      if (response.ok && data.code === 1000) {
+        setRegisterMessage({ type: "success", text: "Đăng ký tham gia lớp học thành công!" });
+      } else {
+        throw new Error(data?.message || "Không thể đăng ký. Vui lòng thử lại.");
+      }
+    } catch (err) {
+      setRegisterMessage({
+        type: "error",
+        text: err instanceof Error ? err.message : "Không thể đăng ký. Vui lòng thử lại.",
+      });
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#f8fafc]">
       <Navbar />
@@ -233,6 +276,30 @@ export default function ClassIntroductionPage() {
                     Học kỳ: {classData.semester}
                   </span>
                 </div>
+              </div>
+              <div className="mt-6 md:mt-0 md:shrink-0">
+                <motion.button
+                  type="button"
+                  onClick={handleRegister}
+                  disabled={isRegistering}
+                  className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl hover:from-emerald-600 hover:to-teal-600 transition-all disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  {isRegistering ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <UserPlus className="w-5 h-5" />
+                  )}
+                  {isRegistering ? "Đang đăng ký..." : "Đăng ký học"}
+                </motion.button>
+                {registerMessage && (
+                  <p
+                    className={`mt-3 text-sm font-medium ${
+                      registerMessage.type === "success" ? "text-emerald-600" : "text-red-600"
+                    }`}
+                  >
+                    {registerMessage.text}
+                  </p>
+                )}
               </div>
             </div>
           </div>
