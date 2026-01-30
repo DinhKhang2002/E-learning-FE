@@ -27,6 +27,7 @@ const BASE_HTTP = process.env.NEXT_PUBLIC_API;
 const STUDENT_CLASSES_API = (studentId: string | number) =>
   `${BASE_HTTP}/api/class-students/classes/${studentId}`;
 const JOIN_CLASS_API = `${BASE_HTTP}/api/class-students/class-code`;
+const SUGGESTED_CLASSES_API = `${BASE_HTTP}/api/classes/suggested`;
 
 interface ClassData {
   id: number;
@@ -36,6 +37,20 @@ interface ClassData {
   semester: string;
   teacherId: number;
   teacherName: string | null;
+  createdAt: string;
+}
+
+interface SuggestedClassApi {
+  id: number;
+  name: string;
+  code: string;
+  description: string;
+  semester: string;
+  teacherId: number;
+  teacherName: string | null;
+  classType: string;
+  powerBy: string | null;
+  classIntroduction: string | null;
   createdAt: string;
 }
 
@@ -59,35 +74,11 @@ function getAccentColor(index: number): "default" | "green" | "purple" | "orange
   return colors[index % colors.length];
 }
 
-const suggestedClasses = [
-  {
-    id: 1,
-    title: "JavaScript nâng cao",
-    author: "John Doe",
-    accent: "from-cyan-100 to-sky-200",
-    illustration: "JS",
-  },
-  {
-    id: 2,
-    title: "Khóa học dữ liệu với R",
-    author: "Jane Smith",
-    accent: "from-emerald-100 to-green-200",
-    illustration: "R",
-  },
-  {
-    id: 3,
-    title: "Nhập môn Thiết kế đồ họa",
-    author: "Alex Ray",
-    accent: "from-indigo-100 to-blue-200",
-    illustration: "GD",
-  },
-  {
-    id: 4,
-    title: "Kỹ năng nói trước công chúng",
-    author: "Emily White",
-    accent: "from-amber-100 to-orange-200",
-    illustration: "SP",
-  },
+const SUGGESTED_ACCENTS = [
+  "from-cyan-100 to-sky-200",
+  "from-emerald-100 to-green-200",
+  "from-indigo-100 to-blue-200",
+  "from-amber-100 to-orange-200",
 ];
 
 const announcements = [
@@ -150,6 +141,10 @@ export default function HomePage() {
   const [isJoiningClass, setIsJoiningClass] = useState(false);
   const [joinClassError, setJoinClassError] = useState<string | null>(null);
   const [classCode, setClassCode] = useState("");
+
+  // Suggested classes from API
+  const [suggestedClasses, setSuggestedClasses] = useState<SuggestedClassApi[]>([]);
+  const [suggestedLoading, setSuggestedLoading] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -223,6 +218,31 @@ export default function HomePage() {
       fetchStudentClasses(authToken, studentId);
     }
   }, [authToken, studentId, fetchStudentClasses]);
+
+  const fetchSuggestedClasses = useCallback(async (token: string) => {
+    setSuggestedLoading(true);
+    try {
+      const response = await fetch(SUGGESTED_CLASSES_API, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data: ApiResponse<SuggestedClassApi[]> = await response.json();
+      if (data.code === 1000 && Array.isArray(data.result)) {
+        setSuggestedClasses(data.result);
+      } else {
+        setSuggestedClasses([]);
+      }
+    } catch {
+      setSuggestedClasses([]);
+    } finally {
+      setSuggestedLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (authToken) {
+      fetchSuggestedClasses(authToken);
+    }
+  }, [authToken, fetchSuggestedClasses]);
 
   const handleOpenJoinClassModal = () => {
     setClassCode("");
@@ -525,21 +545,27 @@ export default function HomePage() {
                   </button>
                 </div>
                 <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-                  {suggestedClasses.map((item) => (
-                    <SuggestClassCard
-                      key={item.id}
-                      {...item}
-                      onClick={() => {
-                        // TODO: Navigate to class details or search page
-                        console.log("Suggested class clicked:", item.title);
-                      }}
-                    />
-                  ))}
+                  {suggestedLoading ? (
+                    <div className="col-span-full flex items-center justify-center py-8">
+                      <Loader2 className="w-8 h-8 animate-spin text-sky-500" />
+                    </div>
+                  ) : (
+                    suggestedClasses.map((item, index) => (
+                      <SuggestClassCard
+                        key={item.id}
+                        title={item.name}
+                        author={item.powerBy || item.teacherName || "—"}
+                        accent={SUGGESTED_ACCENTS[index % SUGGESTED_ACCENTS.length]}
+                        illustration={getClassIllustration(item.name)}
+                        onClick={() => router.push(`/classIntroduction?classId=${item.id}`)}
+                      />
+                    ))
+                  )}
                 </div>
               </motion.section>
             </div>
 
-            <aside className="flex flex-col gap-8">
+            {/* <aside className="flex flex-col gap-8">
               <motion.section
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -590,7 +616,7 @@ export default function HomePage() {
                   ))}
                 </div>
               </motion.section>
-            </aside>
+            </aside> */}
           </div>
         </section>
       </div>
